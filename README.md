@@ -1,1 +1,3 @@
-This is the repository to the smart-city simulator project
+Smart City Simulator
+
+To run the simulator is necessary install Sim-Diasca, a general-purpose, large-scale, discrete-event simulator.
