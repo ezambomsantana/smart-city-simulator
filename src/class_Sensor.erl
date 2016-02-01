@@ -5,18 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, SensorName, SensorLat, SensorLong,
-		InitialValue, GenerateDataInterval ).
+-define( wooper_construct_parameters, ActorSettings, SensorName, SensorLat, SensorLong , Type ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/6, new_link/6,
-		 synchronous_new/6, synchronous_new_link/6,
-		 synchronous_timed_new/6, synchronous_timed_new_link/6,
-		 remote_new/7, remote_new_link/7, remote_synchronous_new/7,
-		 remote_synchronous_new_link/7, remote_synchronisable_new_link/7,
-		 remote_synchronous_timed_new/7, remote_synchronous_timed_new_link/7,
-		 construct/7, destruct/1 ).
+-define( wooper_construct_export, new/5, new_link/5,
+		 synchronous_new/5, synchronous_new_link/5,
+		 synchronous_timed_new/5, synchronous_timed_new_link/5,
+		 remote_new/6, remote_new_link/6, remote_synchronous_new/6,
+		 remote_synchronous_new_link/6, remote_synchronisable_new_link/6,
+		 remote_synchronous_timed_new/6, remote_synchronous_timed_new_link/6,
+		 construct/6, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2).
@@ -40,7 +39,7 @@
 % Creates a new soda vending machine.
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), sensor_lat(), sensor_long(), sensor_value(), sensor_data_interval()) -> wooper:state().
+				class_Actor:name(), sensor_lat(), sensor_long() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, SensorName ),
@@ -62,11 +61,12 @@ construct( State, ?wooper_construct_parameters ) ->
 
 	setAttributes( ActorState, [	
 		{ sensor_name, SensorName },
-		{ sensor_lat, SensorLat },
-		{ sensor_long, SensorLong },
-		{ sensor_value, InitialValue },
-		{ sensor_data_interval, GenerateDataInterval },
+		{ lat, SensorLat },
+		{ long, SensorLong },
+		{ next_move_tick, 1 },
+		{ sensor_value, 0 },
 		{ probe_pid, StockProbePid },
+		{ type, Type },
 		{ trace_categorization,
 		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
 							] ).
@@ -90,38 +90,73 @@ destruct( State ) ->
 -spec actSpontaneous( wooper:state() ) -> oneway_return().
 actSpontaneous( State ) ->
 
-	% Manages automatically the fact that the creation of this probe may have
-	% been rejected by the result manager:
+	CurrentTick = class_Actor:get_current_tick( State ),
 
-	Value = 10
-		+ class_RandomManager:get_positive_integer_gaussian_value(
-			_Mu=30, _Sigma=5.0 ),
-	NewState = setAttribute( State, sensor_value, Value ),
+	case ?getAttr(next_move_tick) of
 
-	Filename = text_utils:format(
-				 "/home/eduardo/Software/apache-tomcat-8.0.26/webapps/ROOT/~s.xml",
-				 [ getAttribute( NewState, sensor_name ) ] ),
+		MoveTick when CurrentTick >= MoveTick ->
 
-	Lat = getAttribute( NewState, sensor_lat ),
+			Value = 10
+				+ class_RandomManager:get_positive_integer_gaussian_value(
+					_Mu=20, _Sigma=5.0 ),
 
-	Long = getAttribute( NewState, sensor_long ),
+			NewState = setAttribute( State, sensor_value, Value ),
 
-	InitFile = file_utils:open( Filename, _Opts=[ write, delayed_write ] ),
+			Filename = text_utils:format(
+					 "/home/eduardo/sc-monitor/locations/sensors/~s.xml",
+					 [ getAttribute( NewState, sensor_name ) ] ),
 
-	file_utils:write( InitFile, "<locations>", [] ),	
-	file_utils:write( InitFile, "<value> ~w </value>", [ Value  ] ),
-	file_utils:write( InitFile, "<lat> ~w </lat>", [ Lat  ] ),
-	file_utils:write( InitFile, "<long> ~w </long>", [ Long  ] ),
-	file_utils:write( InitFile, "</locations>", [] ),
+			Lat = getAttribute( NewState, lat ),
+
+			Long = getAttribute( NewState, long ),
+
+			InitFile = file_utils:open( Filename, _Opts=[ write, delayed_write ] ),
+
+			file_utils:write( InitFile, "<locations>", [] ),	
+
+			case ?getAttr(type) of
+
+				rain ->
+
+					file_utils:write( InitFile, "<type>rain</type>", [] ),
+					file_utils:write( InitFile, "<value>Rain:~w</value>", [ Value  ] );
+
+				temperature -> 
+
+					file_utils:write( InitFile, "<type>temperature</type>", [] ),
+					file_utils:write( InitFile, "<value>Temperature:~w</value>", [ Value  ] );
+
+				air_polluition ->
+
+					file_utils:write( InitFile, "<type>air_polluition</type>", [] ),
+					file_utils:write( InitFile, "<value>Polluition:~w</value>", [ Value  ] )
+
+			end,
+			
+			file_utils:write( InitFile, "<lat> ~w </lat>", [ Lat  ] ),
+			file_utils:write( InitFile, "<long> ~w </long>", [ Long  ] ),
+			file_utils:write( InitFile, "</locations>", [] ),
 		
-	file_utils:close( InitFile ),
+			file_utils:close( InitFile ),
 
-	class_Probe:send_data( ?getAttr(probe_pid),
-		 class_Actor:get_current_tick( NewState ),
-		 { getAttribute( NewState, sensor_value ) } ),
+			class_Probe:send_data( ?getAttr(probe_pid),
+				 class_Actor:get_current_tick( NewState ),
+				 { getAttribute( NewState, sensor_value ) } ),
+
+			CurrentTick = class_Actor:get_current_tick( NewState ),
+
+			TickDuration = class_Actor:convert_seconds_to_non_null_ticks(
+							 10, _MaxRelativeErrorForTest=0.50, NewState ),
+
+			TickState = setAttribute( NewState, next_move_tick,
+										 CurrentTick + TickDuration ),	
 
 	
-	executeOneway( State, scheduleNextSpontaneousTick ).
+			executeOneway( TickState, scheduleNextSpontaneousTick );
+		_ ->
+			executeOneway( State, scheduleNextSpontaneousTick )
+
+	end.
 
 
 
