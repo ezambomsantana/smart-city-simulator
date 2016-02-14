@@ -26,7 +26,9 @@ To install the SCSimulator visualization tool, it is required to install the JDK
 
 Video with the simulator installation
 
+
 Video with the simulator running (in Portuguese)
+
 https://www.youtube.com/watch?v=iDcinyRxmTQ
 
 
