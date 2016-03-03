@@ -18,7 +18,7 @@ To install Sim-Diasca on Linux follow these steps:
 
 5) To run a example simulation run the command make smart_city_run
 
-## Installing the Visualization Tool
+## Installing the Visualization Tool (Monitor)
 
 To install the SCSimulator visualization tool, it is required to install the JDK (version 7+) and the Apache Tomcat web server (version 7+). This is a web-based application written in Java, the application access the Google Maps API and read Sim-Diasca files with the positions and values generated in the simulation.
 
