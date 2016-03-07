@@ -46,4 +46,3 @@ Video with the simulator running (in Portuguese) - https://www.youtube.com/watch
 ## Downloads
 
 Virtual Machine with the Simulator Installed
-
