@@ -11,6 +11,8 @@ The list bellow describes the actors included in each version of the simulation.
 
 ### Version 1.1
 
+The classes of version 1.1 are:
+
 #### BusStop
 
 #### BusTerminal
@@ -27,8 +29,8 @@ The class Car has the aim to simulate the behaviour of a car moving in the city.
 
 The main methods of this class are: move, to chage the position of the vehicle, going to a foward position in the route, calculeted by its speed; wait_traffic_light, to send a signal to the car wait the traffic light become green to start moving again; and is_to_move to verify if the car is allowed to move.
 
-####
+#### Route
 
 #### Building
 
-The class car represents 
+The class Building represents points in the city that has two main functions: generate vehicles and use city resources such as water, eletricity, and gas. Its atributes are a name, the type of the building (house, company, hospital) and its position.
