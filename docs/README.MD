@@ -4,18 +4,20 @@ SCSimulator is an open-source, scalable Smart City simulator with the aim of sim
 
 The Sim-Diasca programming model is easy to understand, it is required to implement an Erlang class (using Erlang WOOPER extension) to each actor that will be used in the simulation. The list bellow describes the actors included in each version of the simulation.
 
-# Version 1.1
+### Version 1.1
 
-## BusStop
+#### BusStop
 
-## BusTerminal
+#### BusTerminal
 
-# Version 1.0
+#### Bus
+
+### Version 1.0
 
 The classes of version 1.0 are:
 
-## Car
+#### Car
 
-##
+####
 
-## Building
+#### Building
