@@ -4,6 +4,8 @@ SCSimulator is a large-scale, Smart City simulator with the aim of simulate many
 
 To install Sim-Diasca is necessary to install the Erlang Virtual Machine. It can be executed in a Windows environment, but it runs better in Linux, mainly in Fedora based systems. You can find and download Sim-Diasca in https://github.com/softlab-ntua/bencherl/tree/master/app/sim-diasca.
 
+SCSimulator Documentation - https://github.com/ezambomsantana/smart-city-simulator/wiki
+
 ## Installing Sim-Diasca and SCSimulator on Linux
 
 To install Sim-Diasca on Linux follow these steps:
