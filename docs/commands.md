@@ -4,9 +4,12 @@ make smart_city_run CMD_LINE_OPT="--batch"
 ## Get the system calls executed in the simulator 
 strace -t -o teste_all -f make smart_city_run CMD_LINE_OPT="--batch"
 
-
 ## Get the summary of the system calls executed in the simulator
 strace -c -o teste_all -f make smart_city_run CMD_LINE_OPT="--batch"
+
+## Split the strace file
+
+split -l 100000 teste_all
 
 ## Generate the Erlang traces
 
