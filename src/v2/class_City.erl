@@ -127,13 +127,12 @@ getPosition( State, Position, CarPID ) ->
 
 			NewDictVertices = dict:store( V , { element(1, Vertex) , element(2, Vertex) + 1} , DictVertices),
 
+			removeAttribute( State , dict ),
 
-    			io:format("vakue dict: ~w~n", [ NewDictVertices ]),
-
-			setAttribute( State , dict , NewDictVertices ),
+			NewState = setAttribute( State , dict , NewDictVertices ),
 
 			class_Actor:send_actor_message( CarPID,
-					{ go, { Position , element(1, Vertex) } }, State ) ;
+					{ go, { Position , element(1, Vertex) } }, NewState ) ;
 
 		false ->					
 			State
