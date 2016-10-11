@@ -40,3 +40,10 @@ To install the SCSimulator visualization tool, it is required to install the JDK
 
 7) Access in any browser the address http://localhost:8080/monitor/simulation.jsp
 
+## Next Developments
+
+1) Include the information of how many cars are in each street.
+
+2) Implement a OSM (Open Street Maps) parser to the creation of the city graph.
+
+3) Integrate the simulation with the visualization tool of MatSIM.
