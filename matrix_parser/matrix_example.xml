@@ -1,0 +1,5 @@
+<scsimulator_matrix>
+	<trip origin="r1" destination="r2" count="10"></trip>
+	<trip origin="r1" destination="r5" count="10"></trip>
+	<trip origin="r2" destination="r7" count="10"></trip>
+</scsimulator_matrix>
