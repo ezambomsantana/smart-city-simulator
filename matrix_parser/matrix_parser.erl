@@ -1,4 +1,4 @@
--module(osm_parser).
+-module(matrix_parser).
 -include_lib("xmerl/include/xmerl.hrl").
 
 % usage:
