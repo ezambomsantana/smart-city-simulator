@@ -34,6 +34,40 @@
 -include("test_constructs.hrl").
 
 
+iterate_list( _ListCount, _GraphPid , [] , _Graph ) ->
+	ok;
+
+iterate_list( ListCount, GraphPid, [ Car | MoreCars] , Graph ) ->
+
+	Count = element ( 3 , Car ),
+
+	create_cars( ListCount , element (1 , string:to_integer(Count)) , GraphPid , Car , Graph ),
+
+	iterate_list( ListCount + 1, GraphPid, MoreCars , Graph ).
+
+
+
+create_cars( _ListCount , _CarCount = 0 , _GraphPid ,  _Car , _Graph ) ->
+	
+	ok;
+
+
+create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
+
+	CarName = io_lib:format( "Car # ~B ~B",
+		[ ListCount , CarCount ] ),
+
+	Origin = element ( 1 , Car ),
+	Destination = element ( 2 , Car ),
+
+	Path = digraph:get_path( Graph , list_to_atom(Origin) , list_to_atom(Destination)),
+
+	class_Actor:create_initial_actor( class_Car,
+		  [ CarName , GraphPid , Origin , Path ] ),
+
+	create_cars( ListCount , CarCount - 1 , GraphPid ,  Car , Graph ).
+
+
 
 
 % Runs the test.
@@ -91,15 +125,57 @@ run() ->
 							   DeploymentSettings, LoadBalancingSettings ),
 
 
+	G = digraph:new(),
+	V1 = digraph:add_vertex(G, r1),
+	V2 = digraph:add_vertex(G, r2),
+	V3 = digraph:add_vertex(G, r3),
+	V4 = digraph:add_vertex(G, r4),
+	V5 = digraph:add_vertex(G, r5),
+	%V6 = digraph:add_vertex(G, r6),
+	V7 = digraph:add_vertex(G, r7),
+	V8 = digraph:add_vertex(G, r8),
+	V9 = digraph:add_vertex(G, r9),
+	V10 = digraph:add_vertex(G, r10),
+	V11 = digraph:add_vertex(G, r11),
+
+
+	digraph:add_edge(G, V1, V2),
+	digraph:add_edge(G, V2, V3),
+	digraph:add_edge(G, V2, V4),
+	digraph:add_edge(G, V3, V7),
+	digraph:add_edge(G, V4, V5),
+	digraph:add_edge(G, V5, V7),
+	digraph:add_edge(G, V7, V8),
+	digraph:add_edge(G, V5, V11),
+	digraph:add_edge(G, V7, V10),
+	digraph:add_edge(G, V7, V9),
+	digraph:add_edge(G, V11, V10),
+	digraph:add_edge(G, V10, V9),
+	digraph:add_edge(G, V9, V8),
+
+
+	digraph:add_edge(G, V2, V1),
+	digraph:add_edge(G, V3, V2),
+	digraph:add_edge(G, V4, V2),
+	digraph:add_edge(G, V7, V3),
+	digraph:add_edge(G, V5, V4),
+	digraph:add_edge(G, V7, V5),
+	digraph:add_edge(G, V8, V7),
+	digraph:add_edge(G, V11, V5),
+	digraph:add_edge(G, V10, V7),
+	digraph:add_edge(G, V9, V7),
+	digraph:add_edge(G, V10, V11),
+	digraph:add_edge(G, V9, V10),
+	digraph:add_edge(G, V8, V9),
+
+	ListVertex = [{r1, {10 , 0}}, {r2, {10 , 0}}, {r3, {10 , 0}}, {r4, {10 , 0}}, {r5, {10 , 0}}, {r6, {10 , 0}}, {r7, {10 , 0}}, {r8, {10 , 0}}, {r9, {10 , 0}}, {r10, {10 , 0}}, {r11, {10 , 0}}],
+
 	Graph = class_Actor:create_initial_actor( class_City,
-		[ _GraphName="sp" ] ),
+		[ _GraphName="sp" , ListVertex ] ),
 
-	_CustomerPid = class_Actor:create_initial_actor( class_Car,
-		  [ _CarName = "car_1" , _GraphPid = Graph , _Origin = r1 , _Path = [ r1 , r2 , r3 , r4 ] ] ),
+	ListCars = matrix_parser:show("/home/eduardo/scsimulator/trips.xml"),
 
-
-	_CustomerPid2 = class_Actor:create_initial_actor( class_Car,
-		  [ _CarName2 = "car_2" , _GraphPid2 = Graph , _Origin2 = r3 , _Path2 = [ r3 ,r2 ,r1 , r4 ] ] ),
+	iterate_list( 0 , Graph , ListCars , G ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
