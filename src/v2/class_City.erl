@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CityName).
+-define( wooper_construct_parameters, ActorSettings, CityName , ListVertex).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/2, new_link/2,
-		 synchronous_new/2, synchronous_new_link/2,
-		 synchronous_timed_new/2, synchronous_timed_new_link/2,
-		 remote_new/3, remote_new_link/3, remote_synchronous_new/3,
-		 remote_synchronous_new_link/3, remote_synchronisable_new_link/3,
-		 remote_synchronous_timed_new/3, remote_synchronous_timed_new_link/3,
-		 construct/3, destruct/1 ).
+-define( wooper_construct_export, new/3, new_link/3,
+		 synchronous_new/3, synchronous_new_link/3,
+		 synchronous_timed_new/3, synchronous_timed_new_link/3,
+		 remote_new/4, remote_new_link/4, remote_synchronous_new/4,
+		 remote_synchronous_new_link/4, remote_synchronisable_new_link/4,
+		 remote_synchronous_timed_new/4, remote_synchronous_timed_new_link/4,
+		 construct/4, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, getPosition/3).
@@ -38,10 +38,15 @@
 % Creates a new city graph
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name()) -> wooper:state().
+				class_Actor:name() , sensor_type()) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, CityName ),
+
+
+        DictVertices = dict:from_list(ListVertex),
+	MapRemove = dict:new(),
+
 
 	G = digraph:new(),
 	V1 = digraph:add_vertex(G, r1),
@@ -49,27 +54,53 @@ construct( State, ?wooper_construct_parameters ) ->
 	V3 = digraph:add_vertex(G, r3),
 	V4 = digraph:add_vertex(G, r4),
 	V5 = digraph:add_vertex(G, r5),
+	%V6 = digraph:add_vertex(G, r6),
+	V7 = digraph:add_vertex(G, r7),
+	V8 = digraph:add_vertex(G, r8),
+	V9 = digraph:add_vertex(G, r9),
+	V10 = digraph:add_vertex(G, r10),
+	V11 = digraph:add_vertex(G, r11),
+
 
 	digraph:add_edge(G, V1, V2),
-	digraph:add_edge(G, V2, V4),
-	digraph:add_edge(G, V2, V5),
 	digraph:add_edge(G, V2, V3),
-	digraph:add_edge(G, V3, V4),
-	digraph:add_edge(G, V3, V2),
-	digraph:add_edge(G, V2, V1),
+	digraph:add_edge(G, V2, V4),
+	digraph:add_edge(G, V3, V7),
+	digraph:add_edge(G, V4, V5),
+	digraph:add_edge(G, V5, V7),
+	digraph:add_edge(G, V7, V8),
+	digraph:add_edge(G, V5, V11),
+	digraph:add_edge(G, V7, V10),
+	digraph:add_edge(G, V7, V9),
+	digraph:add_edge(G, V11, V10),
+	digraph:add_edge(G, V10, V9),
+	digraph:add_edge(G, V9, V8),
 
-	ListVertex = [{r1, {10 , 0}}, {r2, {20 , 0}}, {r3, {30 , 0}}, {r4, {30 , 0}}, {r5, {30 , 0}}],
-        DictVertices = dict:from_list(ListVertex),
+
+	digraph:add_edge(G, V2, V1),
+	digraph:add_edge(G, V3, V2),
+	digraph:add_edge(G, V4, V2),
+	digraph:add_edge(G, V7, V3),
+	digraph:add_edge(G, V5, V4),
+	digraph:add_edge(G, V7, V5),
+	digraph:add_edge(G, V8, V7),
+	digraph:add_edge(G, V11, V5),
+	digraph:add_edge(G, V10, V7),
+	digraph:add_edge(G, V9, V7),
+	digraph:add_edge(G, V10, V11),
+	digraph:add_edge(G, V9, V10),
+	digraph:add_edge(G, V8, V9),
+
 
 	setAttributes( ActorState, [
 		{ city_name, CityName },
 		{ graph, G },
 		{ dict, DictVertices },
-		{ probe_pid, non_wanted_probe },			
+		{ probe_pid, non_wanted_probe },	
+		{ map_remove , MapRemove },		
 		{ trace_categorization,
 		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
 							] ).
-
 % Overridden destructor.
 %
 -spec destruct( wooper:state() ) -> wooper:state().
@@ -93,18 +124,68 @@ actSpontaneous( State ) ->
 
 	DictVertices = getAttribute(State, dict),
 
+	MapRemove = getAttribute( State, map_remove ),
+			
+	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
+
+	NewDictVertices = case dict:is_key(CurrentTickOffset, MapRemove) of
+
+		true ->
+
+		
+			Element = element ( 2 , dict:find( CurrentTickOffset , MapRemove )),
+
+			List = dict:to_list( Element ),
+
+			remove_cars_list ( List , DictVertices );		
+
+		false -> DictVertices
+
+	end,
+
+	NewState = setAttribute( State , dict , NewDictVertices ),
+
 	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
 
 	file_utils:write( InitFile, "city," ),
 	file_utils:write( InitFile, "~w,", [ CurrentTickOffset ] ),
-	file_utils:write( InitFile, "~w,", [ self() ] ),
-	file_utils:write( InitFile, "~w,", [ DictVertices ] ),
-		
-	file_utils:close( InitFile ),
+	file_utils:write( InitFile, "~w\n", [ self() ] ),
 
-	ScheduledState = executeOneway( State, scheduleNextSpontaneousTick ),
+	print_vertices_situation( InitFile , dict:to_list( NewDictVertices ) ),
+
+	file_utils:close( InitFile ),		
+
+	ScheduledState = executeOneway( NewState , scheduleNextSpontaneousTick ),
 
 	?wooper_return_state_only( ScheduledState ).
+
+remove_cars_list( [] , DictVertices ) ->
+
+	DictVertices;
+
+remove_cars_list( [ Head | MoreElements] , DictVertices ) ->
+
+	Vertex = element ( 2 , dict:find( element (1 , Head ) , DictVertices )),
+
+	NewDictVertices = dict:store( element (1 , Head ) , { element(1, Vertex) , element(2, Vertex) - element ( 2 , Head ) } , DictVertices),
+
+	remove_cars_list( MoreElements , NewDictVertices ).
+
+
+print_vertices_situation( _InitFile , [] ) ->
+
+	ok;
+
+print_vertices_situation( InitFile , [ Head | MoreVertices ] ) ->
+
+	file_utils:write( InitFile, "vertex," ),
+	file_utils:write( InitFile, "~w,", [ element( 1 , Head ) ] ),
+
+	VertexData = element( 2 , Head ),
+	file_utils:write( InitFile, "~w,", [ element( 1 , VertexData ) ] ), % Time
+	file_utils:write( InitFile, "~w\n", [ element( 2 , VertexData ) ] ), % Num of cars	
+
+	print_vertices_situation( InitFile , MoreVertices).
 	
 
 % Called by a car wanting to know his next position.
@@ -125,14 +206,57 @@ getPosition( State, Position, CarPID ) ->
 
 			Vertex = element( 2 , dict:find(V, DictVertices)),
 
+			% Update information about the number of vehicles in the vertex that the car arrived.
+
 			NewDictVertices = dict:store( V , { element(1, Vertex) , element(2, Vertex) + 1} , DictVertices),
 
 			removeAttribute( State , dict ),
 
 			NewState = setAttribute( State , dict , NewDictVertices ),
 
+			% Remove the information of where the cars were in the last interaction.
+			MapRemove = getAttribute( State, map_remove ),
+			
+			TickScheduled = class_Actor:get_current_tick_offset( State ) + element(1, Vertex), 
+
+			NewMapRemove = case dict:is_key(TickScheduled, MapRemove) of
+
+				true ->
+	
+					Element = element ( 2 , dict:find( TickScheduled , MapRemove )),
+
+					NewElement = case dict:is_key(V, Element) of
+
+						true ->
+	
+							ElementVertix = element( 2 , dict:find( V , Element ) ),
+
+							dict:store( V , ElementVertix + 1 , Element);
+
+						false ->
+
+							dict:store( V , 1 , Element)
+
+					end,
+					
+					dict:store ( TickScheduled , NewElement , MapRemove );
+
+				false ->
+
+					NovoDict = dict:new(),
+
+					NovoDictElement = dict:store( V , 1 , NovoDict),
+
+					dict:store( TickScheduled , NovoDictElement , MapRemove)
+
+			end,
+
+			% Add the new car position to the list and its deadline.
+			FinalState = setAttribute( NewState , map_remove , NewMapRemove ),
+
+
 			class_Actor:send_actor_message( CarPID,
-					{ go, { Position , element(1, Vertex) } }, NewState ) ;
+					{ go, { Position , element(1, Vertex) } }, FinalState ) ;
 
 		false ->					
 			State
