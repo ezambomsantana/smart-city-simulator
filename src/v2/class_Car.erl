@@ -138,8 +138,6 @@ move( State, PositionTime ) ->
 	NewState = setAttribute( State, car_position, Position ),
 		
 
-
-
 	NewStateSpeed = case Speed > 50 of
 
 		true ->
