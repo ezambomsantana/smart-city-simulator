@@ -48,48 +48,7 @@ construct( State, ?wooper_construct_parameters ) ->
 	MapRemove = dict:new(),
 
 
-	G = digraph:new(),
-	V1 = digraph:add_vertex(G, r1),
-	V2 = digraph:add_vertex(G, r2),
-	V3 = digraph:add_vertex(G, r3),
-	V4 = digraph:add_vertex(G, r4),
-	V5 = digraph:add_vertex(G, r5),
-	%V6 = digraph:add_vertex(G, r6),
-	V7 = digraph:add_vertex(G, r7),
-	V8 = digraph:add_vertex(G, r8),
-	V9 = digraph:add_vertex(G, r9),
-	V10 = digraph:add_vertex(G, r10),
-	V11 = digraph:add_vertex(G, r11),
-
-
-	digraph:add_edge(G, V1, V2),
-	digraph:add_edge(G, V2, V3),
-	digraph:add_edge(G, V2, V4),
-	digraph:add_edge(G, V3, V7),
-	digraph:add_edge(G, V4, V5),
-	digraph:add_edge(G, V5, V7),
-	digraph:add_edge(G, V7, V8),
-	digraph:add_edge(G, V5, V11),
-	digraph:add_edge(G, V7, V10),
-	digraph:add_edge(G, V7, V9),
-	digraph:add_edge(G, V11, V10),
-	digraph:add_edge(G, V10, V9),
-	digraph:add_edge(G, V9, V8),
-
-
-	digraph:add_edge(G, V2, V1),
-	digraph:add_edge(G, V3, V2),
-	digraph:add_edge(G, V4, V2),
-	digraph:add_edge(G, V7, V3),
-	digraph:add_edge(G, V5, V4),
-	digraph:add_edge(G, V7, V5),
-	digraph:add_edge(G, V8, V7),
-	digraph:add_edge(G, V11, V5),
-	digraph:add_edge(G, V10, V7),
-	digraph:add_edge(G, V9, V7),
-	digraph:add_edge(G, V10, V11),
-	digraph:add_edge(G, V9, V10),
-	digraph:add_edge(G, V8, V9),
+	G = osm_to_graph:init( "/home/eduardo/scsimulator/map.osm" ),
 
 
 	setAttributes( ActorState, [
