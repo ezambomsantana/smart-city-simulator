@@ -1,31 +1,3 @@
-% Copyright (C) 2008-2014 EDF R&D
-
-% This file is part of Sim-Diasca.
-
-% Sim-Diasca is free software: you can redistribute it and/or modify
-% it under the terms of the GNU Lesser General Public License as
-% published by the Free Software Foundation, either version 3 of
-% the License, or (at your option) any later version.
-
-% Sim-Diasca is distributed in the hope that it will be useful,
-% but WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-% GNU Lesser General Public License for more details.
-
-% You should have received a copy of the GNU Lesser General Public
-% License along with Sim-Diasca.
-% If not, see <http://www.gnu.org/licenses/>.
-
-% Author: Olivier Boudeville (olivier.boudeville@edf.fr)
-
-
-% Integration test for the soda deterministic example case.
-%
-% See also:
-%
-% - class_SodaVendingMachine.erl
-% - class_DeterministicThirstyCustomer.erl
-%
 -module(smart_city_test).
 
 
@@ -69,12 +41,28 @@ create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
 
 
 
+create_map_list( Graph ) ->
+	
+	Vertices = digraph:vertices( Graph ),
+
+	create_map_list( Vertices , [] ).
+
+
+create_map_list([] , List) ->
+	List;
+
+create_map_list([Element | MoreElements] , List) ->
+
+	NewElement = [{ Element , { 10 , 0 } }], 
+
+	create_map_list( MoreElements , List ++ NewElement ).
+
+
 
 % Runs the test.
 %
 -spec run() -> no_return().
-run() ->
-
+run() ->	
 
 	?test_start,
 
@@ -125,50 +113,13 @@ run() ->
 							   DeploymentSettings, LoadBalancingSettings ),
 
 
-	G = digraph:new(),
-	V1 = digraph:add_vertex(G, r1),
-	V2 = digraph:add_vertex(G, r2),
-	V3 = digraph:add_vertex(G, r3),
-	V4 = digraph:add_vertex(G, r4),
-	V5 = digraph:add_vertex(G, r5),
-	%V6 = digraph:add_vertex(G, r6),
-	V7 = digraph:add_vertex(G, r7),
-	V8 = digraph:add_vertex(G, r8),
-	V9 = digraph:add_vertex(G, r9),
-	V10 = digraph:add_vertex(G, r10),
-	V11 = digraph:add_vertex(G, r11),
 
+	G = osm_to_graph:init( "/home/eduardo/scsimulator/map.osm" ),
 
-	digraph:add_edge(G, V1, V2),
-	digraph:add_edge(G, V2, V3),
-	digraph:add_edge(G, V2, V4),
-	digraph:add_edge(G, V3, V7),
-	digraph:add_edge(G, V4, V5),
-	digraph:add_edge(G, V5, V7),
-	digraph:add_edge(G, V7, V8),
-	digraph:add_edge(G, V5, V11),
-	digraph:add_edge(G, V7, V10),
-	digraph:add_edge(G, V7, V9),
-	digraph:add_edge(G, V11, V10),
-	digraph:add_edge(G, V10, V9),
-	digraph:add_edge(G, V9, V8),
+	ListVertex = create_map_list( G ),
 
+    	io:format("vakue dict: ~w~n", [ ListVertex ]),
 
-	digraph:add_edge(G, V2, V1),
-	digraph:add_edge(G, V3, V2),
-	digraph:add_edge(G, V4, V2),
-	digraph:add_edge(G, V7, V3),
-	digraph:add_edge(G, V5, V4),
-	digraph:add_edge(G, V7, V5),
-	digraph:add_edge(G, V8, V7),
-	digraph:add_edge(G, V11, V5),
-	digraph:add_edge(G, V10, V7),
-	digraph:add_edge(G, V9, V7),
-	digraph:add_edge(G, V10, V11),
-	digraph:add_edge(G, V9, V10),
-	digraph:add_edge(G, V8, V9),
-
-	ListVertex = [{r1, {10 , 0}}, {r2, {10 , 0}}, {r3, {10 , 0}}, {r4, {10 , 0}}, {r5, {10 , 0}}, {r6, {10 , 0}}, {r7, {10 , 0}}, {r8, {10 , 0}}, {r9, {10 , 0}}, {r10, {10 , 0}}, {r11, {10 , 0}}],
 
 	Graph = class_Actor:create_initial_actor( class_City,
 		[ _GraphName="sp" , ListVertex ] ),
