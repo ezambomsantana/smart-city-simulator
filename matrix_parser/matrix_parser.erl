@@ -64,7 +64,9 @@ extract_node(Node) ->
 			Origin = children( Attributes , origin ),
 			Destination = children( Attributes , destination ),
 			Count = children( Attributes , count ),
-			[ { Origin , Destination , Count } ];
+			StartTime = children( Attributes , start ),
+			LinkOrigin = children( Attributes , link_origin ),
+			[ { Origin , Destination , Count , StartTime , LinkOrigin } ];
 
 		_ ->
 			ok
