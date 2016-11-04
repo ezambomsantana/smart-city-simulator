@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CarName, GraphPID , Origin, Path).
+-define( wooper_construct_parameters, ActorSettings, CarName, GraphPID , Origin, Path , StartTime , LinkOrigin ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/5, new_link/5,
-		 synchronous_new/5, synchronous_new_link/5,
-		 synchronous_timed_new/5, synchronous_timed_new_link/5,
-		 remote_new/6, remote_new_link/6, remote_synchronous_new/6,
-		 remote_synchronous_new_link/6, remote_synchronisable_new_link/6,
-		 remote_synchronous_timed_new/6, remote_synchronous_timed_new_link/6,
-		 construct/6, destruct/1 ).
+-define( wooper_construct_export, new/7, new_link/7,
+		 synchronous_new/7, synchronous_new_link/7,
+		 synchronous_timed_new/7, synchronous_timed_new_link/7,
+		 remote_new/8, remote_new_link/8, remote_synchronous_new/8,
+		 remote_synchronous_new_link/8, remote_synchronisable_new_link/8,
+		 remote_synchronous_timed_new/8, remote_synchronous_timed_new_link/8,
+		 construct/8, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, go/3 ).
@@ -38,20 +38,24 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type(), sensor_type()) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
+
 
 	ActorState = class_Actor:construct( State, ActorSettings, CarName ),
 
 	setAttributes( ActorState, [
 		{ car_name, CarName },
+		{ link_origin, LinkOrigin },
 		{ graph_pid, GraphPID },
 		{ origin , Origin },
 		{ path , Path },
 		{ index , 1 },
 		{ speed , 0 },
 		{ next_move_tick, 1 },
-		{ probe_pid, non_wanted_probe },					
+		{ car_position, -1 },
+		{ probe_pid, non_wanted_probe },	
+		{ start_time , StartTime },					
 		{ trace_categorization,
 		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
 							] ).
@@ -82,18 +86,30 @@ request_position( State ) ->
 
 	Path = ?getAttr(path),
 
-	case Index < length( Path ) of
-
-		true ->
-
-			Position = list_utils:get_element_at( Path, Index ),
-
-			class_Actor:send_actor_message( ?getAttr(graph_pid),
-				{ getPosition, Position }, setAttribute( State , index, Index + 1) );
-
+	case Path of 
+	
 		false ->
 
-			State
+			State;
+
+		_ ->
+
+			case Index + 1 < length( Path ) of
+
+				true ->
+	
+					InitialVertice = list_utils:get_element_at( Path, Index ),
+
+					FinalVertice = list_utils:get_element_at( Path, Index + 1 ),
+
+					class_Actor:send_actor_message( ?getAttr(graph_pid),
+						{ getPosition, { InitialVertice , FinalVertice } }, setAttribute( State , index, Index + 1) );
+
+				false ->
+
+					State
+	
+			end
 
 	end.
 
@@ -111,7 +127,7 @@ go( State, PositionTime , _GraphPID ) ->
 -spec move( wooper:state(), car_position() ) -> class_Actor:actor_oneway_return().
 move( State, PositionTime ) ->
 
-	Position = element( 1 , PositionTime ),
+	NewPosition = element( 1 , PositionTime ),
 	Time = element( 2 , PositionTime),
 
 	Speed = getAttribute(State, speed)
@@ -121,21 +137,12 @@ move( State, PositionTime ) ->
 
 	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
 	
-	Filename = text_utils:format(
-				 "/home/eduardo/~s",
-				 [ "log_sc_simulator.log" ] ),
+    	Filename = text_utils:format(
+                 "/home/eduardo/~s",
+                 [ "log_sc_simulator.xml" ] ),
 
-	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
-
-	file_utils:write( InitFile, "car," ),
-	file_utils:write( InitFile, "~w,", [ CurrentTickOffset ] ),
-	file_utils:write( InitFile, "~w,", [ self() ] ),
-	file_utils:write( InitFile, "~w,", [ Speed ] ),
-	file_utils:write( InitFile, "~w\n", [ Position ] ),
-		
-	file_utils:close( InitFile ),
-
-	NewState = setAttribute( State, car_position, Position ),
+	LastPosition = getAttribute( State , car_position ),
+	NewState = setAttribute( State, car_position, NewPosition ),
 		
 
 	NewStateSpeed = case Speed > 50 of
@@ -156,6 +163,27 @@ move( State, PositionTime ) ->
 	TickState = setAttribute( NewStateSpeed, next_move_tick,
 								 CurrentTick + TickDuration ),	
 
+
+    	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+
+	
+   	CarId = getAttribute( State , car_name ),
+
+%		io:format("vertice: ~w~n", [ Vertices ]),
+
+
+%			io:format("vertice: ~w~n", [ Vertex ]),
+
+	case LastPosition == -1 of
+
+		false ->
+			file_utils:write( InitFile, "<event time=\"~w\" type=\"left link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , LastPosition , CarId ] );
+		true -> 
+			ok
+	end,
+
+   	file_utils:write( InitFile, "<event time=\"~w\" type=\"entered link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , NewPosition , CarId ] ),
+   	file_utils:close( InitFile ),
 
  
 %	executeOneway( TickState , scheduleNextSpontaneousTick ).
@@ -188,7 +216,26 @@ onFirstDiasca( State, _SendingActorPid ) ->
 
 	end,
 
-	ScheduledState = executeOneway( State, scheduleNextSpontaneousTick ),
+	Time = getAttribute( State, start_time ),
+
+    	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
+
+   	CarId = getAttribute( State , car_name ),
+
+	LinkOrigin = getAttribute(State, link_origin),
+
+    	Filename = text_utils:format(
+                 "/home/eduardo/~s",
+                 [ "log_sc_simulator.xml" ] ),
+
+    	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+
+   	file_utils:write( InitFile, "<event time=\"~w\" type=\"actend\" person=\"~s\" link=\"~s\" actType=\"h\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin ] ),
+   	file_utils:write( InitFile, "<event time=\"~w\" type=\"departure\" person=\"~s\" link=\"~s\" legMode=\"car\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin ] ),
+  	file_utils:write( InitFile, "<event time=\"~w\" type=\"PersonEntersVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
+  	file_utils:write( InitFile, "<event time=\"~w\" type=\"wait2link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin , CarId ] ),
+   	file_utils:close( InitFile ),
+
+	ScheduledState = executeOneway( State , addSpontaneousTick, CurrentTickOffset + Time ),
 
 	?wooper_return_state_only( ScheduledState ).
-
