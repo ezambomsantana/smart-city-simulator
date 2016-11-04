@@ -42,8 +42,14 @@ To install the SCSimulator visualization tool, it is required to install the JDK
 
 ## Next Developments
 
-1) Include the information of how many cars are in each street.
+1) Include the information of how many cars are in each street. - OK
 
-2) Implement a OSM (Open Street Maps) parser to the creation of the city graph.
+2) Implement a OSM (Open Street Maps) parser to the creation of the city graph. - OK
 
-3) Integrate the simulation with the visualization tool of MatSIM.
+3) Integrate the simulation with the visualization tool of MatSIM. - OK
+
+4) Implement the bus lines of São Paulo
+
+5) Make each node of the city graph be an actor
+
+6) RUn the simulator in containers
