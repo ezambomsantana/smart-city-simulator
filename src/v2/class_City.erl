@@ -48,7 +48,7 @@ construct( State, ?wooper_construct_parameters ) ->
 	MapRemove = dict:new(),
 
 
-	G = osm_to_graph:init( "/home/eduardo/scsimulator/map.osm" ),
+	G = matsim_to_digraph:show( "/home/eduardo/scsimulator/map.xml" , false ),
 
 
 	setAttributes( ActorState, [
@@ -77,9 +77,9 @@ actSpontaneous( State ) ->
 
 	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
 	
-	Filename = text_utils:format(
-				 "/home/eduardo/~s",
-				 [ "log_sc_simulator.log" ] ),
+	%Filename = text_utils:format(
+	%			 "/home/eduardo/~s",
+	%			 [ "log_sc_simulator.log" ] ),
 
 	DictVertices = getAttribute(State, dict),
 
@@ -104,15 +104,15 @@ actSpontaneous( State ) ->
 
 	NewState = setAttribute( State , dict , NewDictVertices ),
 
-	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+%	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
 
-	file_utils:write( InitFile, "city," ),
-	file_utils:write( InitFile, "~w,", [ CurrentTickOffset ] ),
-	file_utils:write( InitFile, "~w\n", [ self() ] ),
+%	file_utils:write( InitFile, "city," ),
+%	file_utils:write( InitFile, "~w,", [ CurrentTickOffset ] ),
+%	file_utils:write( InitFile, "~w\n", [ self() ] ),
 
-	print_vertices_situation( InitFile , dict:to_list( NewDictVertices ) ),
+%	print_vertices_situation( InitFile , dict:to_list( NewDictVertices ) ),
 
-	file_utils:close( InitFile ),		
+%	file_utils:close( InitFile ),		
 
 	ScheduledState = executeOneway( NewState , scheduleNextSpontaneousTick ),
 
@@ -126,25 +126,25 @@ remove_cars_list( [ Head | MoreElements] , DictVertices ) ->
 
 	Vertex = element ( 2 , dict:find( element (1 , Head ) , DictVertices )),
 
-	NewDictVertices = dict:store( element (1 , Head ) , { element(1, Vertex) , element(2, Vertex) - element ( 2 , Head ) } , DictVertices),
+	NewDictVertices = dict:store( element (1 , Head ) , { element(1 , Vertex) , element(2, Vertex) , element(3, Vertex) - element ( 2 , Head ) } , DictVertices),
 
 	remove_cars_list( MoreElements , NewDictVertices ).
 
 
-print_vertices_situation( _InitFile , [] ) ->
+%print_vertices_situation( _InitFile , [] ) ->
 
-	ok;
+%	ok;
 
-print_vertices_situation( InitFile , [ Head | MoreVertices ] ) ->
+%print_vertices_situation( InitFile , [ Head | MoreVertices ] ) ->
 
-	file_utils:write( InitFile, "vertex," ),
-	file_utils:write( InitFile, "~w,", [ element( 1 , Head ) ] ),
+%	file_utils:write( InitFile, "vertex," ),
+%	file_utils:write( InitFile, "~w,", [ element( 1 , Head ) ] ),
 
-	VertexData = element( 2 , Head ),
-	file_utils:write( InitFile, "~w,", [ element( 1 , VertexData ) ] ), % Time
-	file_utils:write( InitFile, "~w\n", [ element( 2 , VertexData ) ] ), % Num of cars	
+%	VertexData = element( 2 , Head ),
+%	file_utils:write( InitFile, "~w,", [ element( 1 , VertexData ) ] ), % Time
+%	file_utils:write( InitFile, "~w\n", [ element( 2 , VertexData ) ] ), % Num of cars	
 
-	print_vertices_situation( InitFile , MoreVertices).
+%	print_vertices_situation( InitFile , MoreVertices).
 	
 
 % Called by a car wanting to know his next position.
@@ -153,21 +153,25 @@ print_vertices_situation( InitFile , [ Head | MoreVertices ] ) ->
 %
 -spec getPosition( wooper:state(), car_index(), pid() ) ->
 					   class_Actor:actor_oneway_return().
-getPosition( State, Position, CarPID ) ->
+getPosition( State, Path , CarPID ) ->
+
+	{ InitialVertice , FinalVertice } = { element(1 , Path) , element(2 , Path) },
 
 	Graph = getAttribute(State, graph),
 
-	case digraph:vertex(Graph, Position) of
+	case digraph:vertex(Graph, InitialVertice) of
 		
-		{ V , _Label } -> 
+		{ _V , _Label } -> 
 			
 			DictVertices = getAttribute(State, dict),
 
-			Vertex = element( 2 , dict:find(V, DictVertices)),
+			Vertices = list_to_atom(lists:concat( [ InitialVertice , FinalVertice ] )),
+
+			Vertex = element( 2 , dict:find( Vertices , DictVertices)),
 
 			% Update information about the number of vehicles in the vertex that the car arrived.
 
-			NewDictVertices = dict:store( V , { element(1, Vertex) , element(2, Vertex) + 1} , DictVertices),
+			NewDictVertices = dict:store( Vertices , { element(1 , Vertex) , element(2, Vertex) , element(3, Vertex) + 1} , DictVertices),
 
 			removeAttribute( State , dict ),
 
@@ -176,7 +180,7 @@ getPosition( State, Position, CarPID ) ->
 			% Remove the information of where the cars were in the last interaction.
 			MapRemove = getAttribute( State, map_remove ),
 			
-			TickScheduled = class_Actor:get_current_tick_offset( State ) + element(1, Vertex), 
+			TickScheduled = class_Actor:get_current_tick_offset( State ) + element(2, Vertex), 
 
 			NewMapRemove = case dict:is_key(TickScheduled, MapRemove) of
 
@@ -184,17 +188,17 @@ getPosition( State, Position, CarPID ) ->
 	
 					Element = element ( 2 , dict:find( TickScheduled , MapRemove )),
 
-					NewElement = case dict:is_key(V, Element) of
+					NewElement = case dict:is_key(Vertices, Element) of
 
 						true ->
 	
-							ElementVertix = element( 2 , dict:find( V , Element ) ),
+							ElementVertix = element( 2 , dict:find( Vertices , Element ) ),
 
-							dict:store( V , ElementVertix + 1 , Element);
+							dict:store( Vertices , ElementVertix + 1 , Element);
 
 						false ->
 
-							dict:store( V , 1 , Element)
+							dict:store( Vertices , 1 , Element)
 
 					end,
 					
@@ -204,7 +208,7 @@ getPosition( State, Position, CarPID ) ->
 
 					NovoDict = dict:new(),
 
-					NovoDictElement = dict:store( V , 1 , NovoDict),
+					NovoDictElement = dict:store( Vertices , 1 , NovoDict),
 
 					dict:store( TickScheduled , NovoDictElement , MapRemove)
 
@@ -215,7 +219,7 @@ getPosition( State, Position, CarPID ) ->
 
 
 			class_Actor:send_actor_message( CarPID,
-					{ go, { Position , element(1, Vertex) } }, FinalState ) ;
+					{ go, { element(1,Vertex) , element(2, Vertex) } }, FinalState ) ;
 
 		false ->					
 			State
