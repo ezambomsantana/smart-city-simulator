@@ -1,3 +1,31 @@
+% Copyright (C) 2008-2014 EDF R&D
+
+% This file is part of Sim-Diasca.
+
+% Sim-Diasca is free software: you can redistribute it and/or modify
+% it under the terms of the GNU Lesser General Public License as
+% published by the Free Software Foundation, either version 3 of
+% the License, or (at your option) any later version.
+
+% Sim-Diasca is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+% GNU Lesser General Public License for more details.
+
+% You should have received a copy of the GNU Lesser General Public
+% License along with Sim-Diasca.
+% If not, see <http://www.gnu.org/licenses/>.
+
+% Author: Olivier Boudeville (olivier.boudeville@edf.fr)
+
+
+% Integration test for the soda deterministic example case.
+%
+% See also:
+%
+% - class_SodaVendingMachine.erl
+% - class_DeterministicThirstyCustomer.erl
+%
 -module(smart_city_test).
 
 
@@ -26,16 +54,18 @@ create_cars( _ListCount , _CarCount = 0 , _GraphPid ,  _Car , _Graph ) ->
 
 create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
 
-	CarName = io_lib:format( "Car # ~B ~B",
+	CarName = io_lib:format( "~B~B",
 		[ ListCount , CarCount ] ),
 
 	Origin = element ( 1 , Car ),
 	Destination = element ( 2 , Car ),
+	StartTime = element ( 4 , Car ),
+	LinkOrigin = element ( 5 , Car ),
 
-	Path = digraph:get_path( Graph , list_to_atom(Origin) , list_to_atom(Destination)),
+	Path = digraph:get_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
 
 	class_Actor:create_initial_actor( class_Car,
-		  [ CarName , GraphPid , Origin , Path ] ),
+		  [ CarName , GraphPid , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin ] ),
 
 	create_cars( ListCount , CarCount - 1 , GraphPid ,  Car , Graph ).
 
@@ -43,19 +73,25 @@ create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
 
 create_map_list( Graph ) ->
 	
-	Vertices = digraph:vertices( Graph ),
-
-	create_map_list( Vertices , [] ).
+	Edges = digraph:edges( Graph ),
 
 
-create_map_list([] , List) ->
+	create_map_list( Edges , Graph , [] ).
+
+
+create_map_list([] , _Graph , List) ->
 	List;
 
-create_map_list([Element | MoreElements] , List) ->
+create_map_list([Element | MoreElements] , Graph , List) ->
+	
+	{_E, _V1, _V2, _Label} = digraph:edge( Graph , Element ),
+	
 
-	NewElement = [{ Element , { 10 , 0 } }], 
+	Vertices = list_to_atom(lists:concat( [ _V1 , _V2 ] )),
 
-	create_map_list( MoreElements , List ++ NewElement ).
+	NewElement = [{ Vertices , { list_to_atom(_Label) , 10 , 0 } }], 
+
+	create_map_list( MoreElements , Graph , List ++ NewElement ).
 
 
 
@@ -63,6 +99,7 @@ create_map_list([Element | MoreElements] , List) ->
 %
 -spec run() -> no_return().
 run() ->	
+
 
 	?test_start,
 
@@ -72,7 +109,7 @@ run() ->
 	  simulation_name = "Sim-Diasca Smart City Integration Test",
 
 	  % Using 100Hz here:
-	  tick_duration = 0.1
+	  tick_duration = 1
 
 	  % We leave it to the default specification (all_outputs):
 	  % result_specification =
@@ -100,9 +137,26 @@ run() ->
 		% well:
 		enable_data_exchanger = { true, [ "soda_parameters.cfg" ] },
 
-		enable_performance_tracker = false
+		enable_performance_tracker = true
 
 	},
+
+
+ 	Filename = text_utils:format(
+                 "/home/eduardo/~s",
+                 [ "log_sc_simulator.xml" ] ),
+
+    	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+
+    	file_utils:write( InitFile, "<events version=\"1.0\">\n" ),
+    	file_utils:close( InitFile ),
+
+	ListCars = matrix_parser:show("/home/eduardo/scsimulator/trips.xml"),
+
+
+	G = matsim_to_digraph:show( "/home/eduardo/scsimulator/map.xml" , false ),
+
+	ListVertex = create_map_list( G ),
 
 
 	% Default load balancing settings (round-robin placement heuristic):
@@ -114,23 +168,20 @@ run() ->
 
 
 
-	G = osm_to_graph:init( "/home/eduardo/scsimulator/map.osm" ),
-
-	ListVertex = create_map_list( G ),
-
-    	io:format("vakue dict: ~w~n", [ ListVertex ]),
-
 
 	Graph = class_Actor:create_initial_actor( class_City,
 		[ _GraphName="sp" , ListVertex ] ),
 
-	ListCars = matrix_parser:show("/home/eduardo/scsimulator/trips.xml"),
 
-	iterate_list( 0 , Graph , ListCars , G ),
+
+
+	iterate_list( 1 , Graph , ListCars , G ),
+
+
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
-	SimulationDuration = 1000,
+	SimulationDuration = 4000,
 
 	DeploymentManagerPid ! { getRootTimeManager, [], self() },
 	RootTimeManagerPid = test_receive(),
@@ -146,6 +197,11 @@ run() ->
 	receive
 
 		simulation_stopped ->
+
+        		CloseFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+
+        		file_utils:write( CloseFile, "</events>" ),
+       			file_utils:close( CloseFile ),
 			?test_info( "Simulation stopped spontaneously, "
 						"specified stop tick must have been reached." )
 
