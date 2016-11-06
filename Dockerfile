@@ -20,3 +20,6 @@ RUN cd /root/scsimulator/scsimulator/common/conf && ./install-erlang.sh
 RUN cd /root/scsimulator/scsimulator/ && make all
 #RUN cd /root/scsimulator/scsimulator/mock-simulators/smart-city_v2/src && make smart_city_run CMD_LINE_OPT="--batch"
 
+
+# docker run -h test.example.com -it 09d70d2c8b9f /bin/bash
+
