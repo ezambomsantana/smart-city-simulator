@@ -25,6 +25,14 @@ RUN mkdir /home/eduardo
 
 #RUN cd /root/scsimulator/scsimulator/mock-simulators/smart-city_v2/src && make smart_city_run CMD_LINE_OPT="--batch"
 
-
+# Create a new docker container from image
 # docker run -h test2.example.com -d -p 2223:22 -e SSH_KEY="$(cat ~/.ssh/id_rsa.pub)" 7f18a0bf96f
 
+# Start a stopped container
+# docker start 393805450e09
+
+# list all docker containers
+# docker ps -a
+
+# verify container ID
+# docker inspect 393805450e09
