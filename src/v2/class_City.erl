@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CityName , ListVertex).
+-define( wooper_construct_parameters, ActorSettings, CityName , ListVertex , MapFile ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/3, new_link/3,
-		 synchronous_new/3, synchronous_new_link/3,
-		 synchronous_timed_new/3, synchronous_timed_new_link/3,
-		 remote_new/4, remote_new_link/4, remote_synchronous_new/4,
-		 remote_synchronous_new_link/4, remote_synchronisable_new_link/4,
-		 remote_synchronous_timed_new/4, remote_synchronous_timed_new_link/4,
-		 construct/4, destruct/1 ).
+-define( wooper_construct_export, new/4, new_link/4,
+		 synchronous_new/4, synchronous_new_link/4,
+		 synchronous_timed_new/4, synchronous_timed_new_link/4,
+		 remote_new/5, remote_new_link/5, remote_synchronous_new/5,
+		 remote_synchronous_new_link/5, remote_synchronisable_new_link/5,
+		 remote_synchronous_timed_new/5, remote_synchronous_timed_new_link/5,
+		 construct/5, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, getPosition/3).
@@ -38,7 +38,7 @@
 % Creates a new city graph
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name() , sensor_type()) -> wooper:state().
+				class_Actor:name() , sensor_type() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, CityName ),
@@ -47,9 +47,10 @@ construct( State, ?wooper_construct_parameters ) ->
         DictVertices = dict:from_list(ListVertex),
 	MapRemove = dict:new(),
 
+	io:format("vInicio: ~s~n", [MapFile ]),
 
-	G = matsim_to_digraph:show( "/home/eduardo/scsimulator/map.xml" , false ),
 
+	G = matsim_to_digraph:show( MapFile , false ),
 
 	setAttributes( ActorState, [
 		{ city_name, CityName },
