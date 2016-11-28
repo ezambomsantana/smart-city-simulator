@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CarName, GraphPID , Origin, Path , StartTime , LinkOrigin ).
+-define( wooper_construct_parameters, ActorSettings, CarName, GraphPID , Origin, Path , StartTime , LinkOrigin , Filename ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/7, new_link/7,
-		 synchronous_new/7, synchronous_new_link/7,
-		 synchronous_timed_new/7, synchronous_timed_new_link/7,
-		 remote_new/8, remote_new_link/8, remote_synchronous_new/8,
-		 remote_synchronous_new_link/8, remote_synchronisable_new_link/8,
-		 remote_synchronous_timed_new/8, remote_synchronous_timed_new_link/8,
-		 construct/8, destruct/1 ).
+-define( wooper_construct_export, new/8, new_link/8,
+		 synchronous_new/8, synchronous_new_link/8,
+		 synchronous_timed_new/8, synchronous_timed_new_link/8,
+		 remote_new/9, remote_new_link/9, remote_synchronous_new/9,
+		 remote_synchronous_new_link/9, remote_synchronisable_new_link/9,
+		 remote_synchronous_timed_new/9, remote_synchronous_timed_new_link/9,
+		 construct/9, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, go/3 ).
@@ -38,7 +38,7 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 
@@ -50,6 +50,7 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ graph_pid, GraphPID },
 		{ origin , Origin },
 		{ path , Path },
+		{ filename , Filename },
 		{ index , 1 },
 		{ speed , 0 },
 		{ next_move_tick, 1 },
@@ -137,9 +138,7 @@ move( State, PositionTime ) ->
 
 	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
 	
-    	Filename = text_utils:format(
-                 "/home/eduardo/~s",
-                 [ "log_sc_simulator.xml" ] ),
+    	Filename = getAttribute( State , filename ),
 
 	LastPosition = getAttribute( State , car_position ),
 	NewState = setAttribute( State, car_position, NewPosition ),
@@ -169,11 +168,6 @@ move( State, PositionTime ) ->
 	
    	CarId = getAttribute( State , car_name ),
 
-%		io:format("vertice: ~w~n", [ Vertices ]),
-
-
-%			io:format("vertice: ~w~n", [ Vertex ]),
-
 	case LastPosition == -1 of
 
 		false ->
@@ -187,9 +181,6 @@ move( State, PositionTime ) ->
 
  
 %	executeOneway( TickState , scheduleNextSpontaneousTick ).
-
-
-
 	
 	executeOneway( TickState, addSpontaneousTick, CurrentTickOffset + Time ).
 
@@ -224,9 +215,7 @@ onFirstDiasca( State, _SendingActorPid ) ->
 
 	LinkOrigin = getAttribute(State, link_origin),
 
-    	Filename = text_utils:format(
-                 "/home/eduardo/~s",
-                 [ "log_sc_simulator.xml" ] ),
+    	Filename = getAttribute( State , filename ),
 
     	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
 
