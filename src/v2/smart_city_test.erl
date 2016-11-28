@@ -34,25 +34,25 @@
 -include("test_constructs.hrl").
 
 
-iterate_list( _ListCount, _GraphPid , [] , _Graph ) ->
+iterate_list( _ListCount, _GraphPid , [] , _Graph , _Filename ) ->
 	ok;
 
-iterate_list( ListCount, GraphPid, [ Car | MoreCars] , Graph ) ->
+iterate_list( ListCount, GraphPid, [ Car | MoreCars] , Graph , Filename ) ->
 
 	Count = element ( 3 , Car ),
 
-	create_cars( ListCount , element (1 , string:to_integer(Count)) , GraphPid , Car , Graph ),
+	create_cars( ListCount , element (1 , string:to_integer(Count)) , GraphPid , Car , Graph , false , Filename ),
 
-	iterate_list( ListCount + 1, GraphPid, MoreCars , Graph ).
+	iterate_list( ListCount + 1, GraphPid, MoreCars , Graph , Filename ).
 
 
 
-create_cars( _ListCount , _CarCount = 0 , _GraphPid ,  _Car , _Graph ) ->
+create_cars( _ListCount , _CarCount = 0 , _GraphPid ,  _Car , _Graph , _Path , _Filename ) ->
 	
 	ok;
 
 
-create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
+create_cars( ListCount , CarCount , GraphPid ,  Car , Graph , Path , Filename ) ->
 
 	CarName = io_lib:format( "~B~B",
 		[ ListCount , CarCount ] ),
@@ -62,12 +62,25 @@ create_cars( ListCount , CarCount , GraphPid ,  Car , Graph ) ->
 	StartTime = element ( 4 , Car ),
 	LinkOrigin = element ( 5 , Car ),
 
-	Path = digraph:get_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
+	case Path of
 
-	class_Actor:create_initial_actor( class_Car,
-		  [ CarName , GraphPid , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin ] ),
+		false ->
 
-	create_cars( ListCount , CarCount - 1 , GraphPid ,  Car , Graph ).
+			NewPath = digraph:get_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
+
+			class_Actor:create_initial_actor( class_Car,
+		  		[ CarName , GraphPid , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename ] ),
+
+			create_cars( ListCount , CarCount - 1 , GraphPid ,  Car , Graph , NewPath , Filename );
+
+		_ ->
+
+			class_Actor:create_initial_actor( class_Car,
+		  		[ CarName , GraphPid , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename ] ),
+
+			create_cars( ListCount , CarCount - 1 , GraphPid ,  Car , Graph , Path , Filename )
+
+	end.
 
 
 
@@ -141,20 +154,19 @@ run() ->
 
 	},
 
+	Config = config_parser:show("/home/eduardo/config.xml"),
 
- 	Filename = text_utils:format(
-                 "/home/eduardo/~s",
-                 [ "log_sc_simulator.xml" ] ),
+	ListCars = matrix_parser:show( element( 4 , Config ) ),
+
+	G = matsim_to_digraph:show( element( 3 , Config ) , false ),
+
+ 	Filename = element( 1 , Config ),
 
     	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
 
     	file_utils:write( InitFile, "<events version=\"1.0\">\n" ),
     	file_utils:close( InitFile ),
 
-	ListCars = matrix_parser:show("/home/eduardo/scsimulator/trips.xml"),
-
-
-	G = matsim_to_digraph:show( "/home/eduardo/scsimulator/map.xml" , false ),
 
 	ListVertex = create_map_list( G ),
 
@@ -166,22 +178,15 @@ run() ->
 	DeploymentManagerPid = sim_diasca:init( SimulationSettings,
 							   DeploymentSettings, LoadBalancingSettings ),
 
-
-
-
 	Graph = class_Actor:create_initial_actor( class_City,
-		[ _GraphName="sp" , ListVertex ] ),
+		[ _GraphName="sp" , ListVertex , element( 3 , Config ) ] ),
 
 
-
-
-	iterate_list( 1 , Graph , ListCars , G ),
-
-
+	iterate_list( 1 , Graph , ListCars , G , Filename ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
-	SimulationDuration = 4000,
+	SimulationDuration = element( 1 , string:to_integer(element( 2 , Config ) ) ),
 
 	DeploymentManagerPid ! { getRootTimeManager, [], self() },
 	RootTimeManagerPid = test_receive(),
