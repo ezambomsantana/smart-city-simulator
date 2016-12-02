@@ -1,3 +1,5 @@
+% Author: Eduardo Santana (efzambom@ime.usp.br)
+
 -module(smart_city_test).
 
 
@@ -34,36 +36,49 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 	StartTime = element ( 4 , Car ),
 	LinkOrigin = element ( 5 , Car ),
 
+	FileNumber = class_RandomManager:get_uniform_value( 50 ) ,
+
+	FileFinalName = lists:concat( [ Filename , FileNumber ] ),
+
 	case Path of
 
 		false ->
 
 			NewPath = digraph:get_short_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
 
+			ListVertexPath = get_path_nodes( NewPath , ListVertex , [] ),
+
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertex , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename ] ),
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , FileFinalName ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , Filename );
 
 		_ ->
 
+			ListVertexPath = get_path_nodes( Path , ListVertex , [] ),
+
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertex , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename ] ),
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , FileFinalName ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , Filename )
 
 	end.
 
 
-
-create_map_list( Graph ) ->
+get_path_nodes( [] , _ListVertex , List ) ->
 	
-	Edges = digraph:edges( Graph ),
+	List;
+
+get_path_nodes( [ Node | MoreNodes] , ListVertex , List ) ->
+
+	Element = dict:find( Node , ListVertex ),
+
+	ElementList = [{ Node , element( 2 , Element) }],
+
+	get_path_nodes( MoreNodes , ListVertex , List ++ ElementList ).	
 
 
-	create_map_list( Edges , Graph , [] ).
-
-
+% for each vertex is necessary to save its out links
 create_map_list([] , _Graph , List) ->
 	List;
 
@@ -78,25 +93,29 @@ create_map_list([Element | MoreElements] , Graph , List) ->
 	create_map_list( MoreElements , Graph , List ++ NewElement ).
 
 
-create_street_list( Graph , ListEdges ) ->
+% Create the actors that represent the city vertex
+
+create_street_list( Graph ) ->
 	
 	Vertices = digraph:vertices( Graph ),
 
-	create_street_list( Vertices , ListEdges , [] ).
+	create_street_list( Vertices , [] , Graph ).
 
-create_street_list([] , _ListEdges , List) ->
+create_street_list([] , List , _Graph ) ->
 	List;
 
-create_street_list([Element | MoreElements] , ListEdges , List) ->
+create_street_list([Element | MoreElements] , List , Graph) ->
+
+	Edges = digraph:out_edges( Graph , Element ),
+
+	ListEdges = create_map_list( Edges , Graph , [] ),
 
 	StreetPID = class_Actor:create_initial_actor( class_Street,
 		  [ atom_to_list(Element) , ListEdges ] ),
 
 	NewElement = [{ Element , StreetPID }], 
 
-	create_street_list( MoreElements , ListEdges , List ++ NewElement ).
-
-
+	create_street_list( MoreElements , List ++ NewElement , Graph ).
 
 % Runs the test.
 %
@@ -167,15 +186,11 @@ run() ->
     	file_utils:write( InitFile, "<events version=\"1.0\">\n" ),
     	file_utils:close( InitFile ),
 
-	ListEdges = create_map_list( G ),
+	% create the vertices actors
+	ListVertex  = create_street_list( G ),
 
-	ListVertex  = create_street_list( G , ListEdges ),
-
-	%Graph = class_Actor:create_initial_actor( class_City,
-	%	[ _GraphName="sp" , ListVertex , element( 3 , Config ) ] ),
-
-
-	iterate_list( 1 , ListVertex , ListCars , G , Filename ),
+	% create the cars
+	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
