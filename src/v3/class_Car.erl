@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , Filename ).
+-define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , Filename , LogPID ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/8, new_link/8,
-		 synchronous_new/8, synchronous_new_link/8,
-		 synchronous_timed_new/8, synchronous_timed_new_link/8,
-		 remote_new/9, remote_new_link/9, remote_synchronous_new/9,
-		 remote_synchronous_new_link/9, remote_synchronisable_new_link/9,
-		 remote_synchronous_timed_new/9, remote_synchronous_timed_new_link/9,
-		 construct/9, destruct/1 ).
+-define( wooper_construct_export, new/9, new_link/9,
+		 synchronous_new/9, synchronous_new_link/9,
+		 synchronous_timed_new/9, synchronous_timed_new_link/9,
+		 remote_new/10, remote_new_link/10, remote_synchronous_new/10,
+		 remote_synchronous_new_link/10, remote_synchronisable_new_link/10,
+		 remote_synchronous_timed_new/10, remote_synchronous_timed_new_link/10,
+		 construct/10, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, go/3 ).
@@ -38,7 +38,7 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 
@@ -52,6 +52,7 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ dict , DictVertices },
 		{ origin , Origin },
 		{ path , Path },
+		{ log_pid, LogPID },
 		{ filename , Filename },
 		{ index , 1 },
 		{ speed , 0 },
@@ -172,22 +173,23 @@ move( State, PositionTime ) ->
 
 	
   	CarId = getAttribute( State , car_name ),
-    	Filename = getAttribute( State , filename ),
+    %	Filename = getAttribute( State , filename ),
 
-	case LastPosition == -1 of
+	FinalState = case LastPosition == -1 of
 
 		false ->
+
+
 
 			LastPositionText = io_lib:format( "<event time=\"~w\" type=\"left link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) , CarId ] ),
 			NextPositionText = io_lib:format( "<event time=\"~w\" type=\"entered link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [  CurrentTickOffset , CarId , atom_to_list(NewPosition) , CarId ] ),
 
 			TextFile = lists:concat( [ LastPositionText , NextPositionText  ] ),
 
-			InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+			X = ?getAttr(log_pid),
 
-			file_utils:write( InitFile, TextFile ),
-			
-			file_utils:close( InitFile );
+			class_Actor:send_actor_message( X,
+				{ receive_action, { TextFile } }, TickState );
 
 		true -> 
 
@@ -202,15 +204,14 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ Text1 , Text2 , Text3 , Text4 , NextPositionText  ] ),
 
-			InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+			X = ?getAttr(log_pid),
 			
-			file_utils:write( InitFile, TextFile ),
-			
-			file_utils:close( InitFile )
+			class_Actor:send_actor_message( X,
+				{ receive_action, { TextFile } }, TickState )
 
 	end,
 
-	executeOneway( TickState, addSpontaneousTick, CurrentTickOffset + Time ).
+	executeOneway( FinalState , addSpontaneousTick, CurrentTickOffset + Time ).
 
 
 % Simply schedules this just created actor at the next tick (diasca 0).
