@@ -8,25 +8,25 @@
 -include("test_constructs.hrl").
 
 
-iterate_list( _ListCount, _ListVertex , [] , _Graph , _Filename ) ->
+iterate_list( _ListCount, _ListVertex , [] , _Graph , _Filename , _LogPID ) ->
 	ok;
 
-iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , Filename ) ->
+iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , Filename , LogPID ) ->
 
 	Count = element ( 3 , Car ),
 
-	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , Filename ),
+	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , Filename , LogPID ),
 
-	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , Filename ).
+	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , Filename , LogPID ).
 
 
 
-create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _Filename ) ->
+create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _Filename , _LogPID ) ->
 	
 	ok;
 
 
-create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename ) ->
+create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename , LogPID ) ->
 
 	CarName = io_lib:format( "~B~B",
 		[ ListCount , CarCount ] ),
@@ -35,10 +35,6 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 	Destination = element ( 2 , Car ),
 	StartTime = element ( 4 , Car ),
 	LinkOrigin = element ( 5 , Car ),
-
-	FileNumber = class_RandomManager:get_uniform_value( 50 ) ,
-
-	FileFinalName = lists:concat( [ Filename , FileNumber ] ),
 
 	case Path of
 
@@ -49,18 +45,18 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 			ListVertexPath = get_path_nodes( NewPath , ListVertex , [] ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , FileFinalName ] ),
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPID ] ),
 
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , Filename );
+			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , Filename , LogPID );
 
 		_ ->
 
 			ListVertexPath = get_path_nodes( Path , ListVertex , [] ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , FileFinalName ] ),
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPID ] ),
 
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , Filename )
+			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , Filename , LogPID )
 
 	end.
 
@@ -173,7 +169,7 @@ run() ->
 	DeploymentManagerPid = sim_diasca:init( SimulationSettings,
 							   DeploymentSettings, LoadBalancingSettings ),
 
-	Config = config_parser:show("/data/santaned/scsimulator/config.xml"),
+	Config = config_parser:show("/home/santaned/scsimulator/config.xml"),
 
 	ListCars = matrix_parser:show( element( 4 , Config ) ),
 
@@ -189,8 +185,11 @@ run() ->
 	% create the vertices actors
 	ListVertex  = create_street_list( G ),
 
+	LogPID = class_Actor:create_initial_actor( class_Log,
+		 	[ "Log" , Filename ] ),
+
 	% create the cars
-	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename ),
+	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename , LogPID ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
@@ -226,3 +225,4 @@ run() ->
 	sim_diasca:shutdown(),
 
 	?test_stop.
+
