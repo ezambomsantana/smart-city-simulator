@@ -53,3 +53,5 @@ To install the SCSimulator visualization tool, it is required to install the JDK
 5) Make each node of the city graph be an actor
 
 6) RUn the simulator in containers - OK
+
+http://www.sumo.dlr.de/userdoc/Simulation/Basic_Definition.html
