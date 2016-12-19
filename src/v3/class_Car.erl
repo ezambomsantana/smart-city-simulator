@@ -38,7 +38,7 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , file() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 
@@ -168,12 +168,14 @@ move( State, PositionTime ) ->
 	TickDuration = class_Actor:convert_seconds_to_non_null_ticks(
 					 NextMove, _MaxRelativeErrorForTest=0.50, NewStateSpeed ),
 
-	TickState = setAttribute( NewStateSpeed, next_move_tick,
+	_TickState = setAttribute( NewStateSpeed, next_move_tick,
 								 CurrentTick + TickDuration ),	
 
 	
   	CarId = getAttribute( State , car_name ),
-    %	Filename = getAttribute( State , filename ),
+    	Filename = getAttribute( State , filename ),	
+
+	io:format("vInicio: ~w~n", [ Filename  ]),
 
 	FinalState = case LastPosition == -1 of
 
@@ -186,10 +188,7 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ LastPositionText , NextPositionText  ] ),
 
-			X = ?getAttr(log_pid),
-
-			class_Actor:send_actor_message( X,
-				{ receive_action, { TextFile } }, TickState );
+			file_utils:write( Filename , TextFile  );
 
 		true -> 
 
@@ -204,11 +203,7 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ Text1 , Text2 , Text3 , Text4 , NextPositionText  ] ),
 
-			X = ?getAttr(log_pid),
-			
-			class_Actor:send_actor_message( X,
-				{ receive_action, { TextFile } }, TickState )
-
+			file_utils:write( Filename , TextFile )
 	end,
 
 	executeOneway( FinalState , addSpontaneousTick, CurrentTickOffset + Time ).
