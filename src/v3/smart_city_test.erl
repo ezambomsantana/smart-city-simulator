@@ -8,6 +8,19 @@
 -include("test_constructs.hrl").
 
 
+create_log( _Number = 0, _Filename , _List ) ->
+	_List ;
+
+create_log( Number , Filename , List  ) ->
+
+	LogName = io_lib:format( "Log~B", [ Number ] ),
+
+	LogPID = class_Actor:create_initial_actor( class_Log,
+		 [ LogName , Filename ] ),
+
+	create_log( Number - 1 , LogPID , List ++ [ LogPID ] ).
+
+
 iterate_list( _ListCount, _ListVertex , [] , _Graph , _Filename , _LogPID ) ->
 	ok;
 
@@ -44,8 +57,12 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 
 			ListVertexPath = get_path_nodes( NewPath , ListVertex , [] ),
 
+			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
+
+			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
+
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPID ] ),
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPIDChoose ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , Filename , LogPID );
 
@@ -53,8 +70,12 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 
 			ListVertexPath = get_path_nodes( Path , ListVertex , [] ),
 
+			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
+
+			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
+
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPID ] ),
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPIDChoose ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , Filename , LogPID )
 
@@ -81,10 +102,13 @@ create_map_list([] , _Graph , List) ->
 create_map_list([Element | MoreElements] , Graph , List) ->
 	
 	{_E, _V1, _V2, _Label} = digraph:edge( Graph , Element ),
+
+	Id = element( 1 , _Label),
+	Length = element( 2 , _Label),
 	
 	Vertices = list_to_atom(lists:concat( [ _V1 , _V2 ] )),
 
-	NewElement = [{ Vertices , list_to_atom(_Label) }], 
+	NewElement = [{ Vertices , { list_to_atom( Id ) , Length } }], 
 
 	create_map_list( MoreElements , Graph , List ++ NewElement ).
 
@@ -155,7 +179,7 @@ run() ->
 		% well:
 		enable_data_exchanger = { true, [ "soda_parameters.cfg" ] },
 
-		enable_performance_tracker = false
+		enable_performance_tracker = true
 
 	},
 
@@ -185,11 +209,10 @@ run() ->
 	% create the vertices actors
 	ListVertex  = create_street_list( G ),
 
-	LogPID = class_Actor:create_initial_actor( class_Log,
-		 	[ "Log" , Filename ] ),
+	LogList = create_log( 100 , Filename , [] ),
 
 	% create the cars
-	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename , LogPID ),
+	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename , LogList ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
@@ -225,4 +248,3 @@ run() ->
 	sim_diasca:shutdown(),
 
 	?test_stop.
-
