@@ -45,11 +45,14 @@ construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, LogName ),
 
-	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
+	Filename1 = io_lib:format( "/home/santaned/scsimulator/~s.xml", [ LogName ] ),
+							
+	InitFile = file_utils:open( Filename1, _Opts=[ append, delayed_write ] ),
 
 	setAttributes( ActorState, [
 		{ car_name, LogName },
-		{ file , InitFile },
+		{ file , InitFile },		
+		{ file2 , Filename },
 		{ probe_pid, non_wanted_probe },
 		{ trace_categorization,
 		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
