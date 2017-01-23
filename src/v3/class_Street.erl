@@ -48,10 +48,7 @@ construct( State, ?wooper_construct_parameters ) ->
 	setAttributes( ActorState, [
 		{ street_name , StreetName },
 		{ number_cars , 0 },
-		{ dict , DictVertices }, 
-		{ probe_pid , non_wanted_probe },	
-		{ trace_categorization ,
-		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
+		{ dict , DictVertices }
 							] ).
 
 % Overridden destructor.
@@ -89,10 +86,15 @@ getPosition( State, Path , CarPID ) ->
 
 	Element = element ( 2 , dict:find( LinkId , Dict )),
 
+	Id = element( 1 , Element ), % Link Id
+	Length = element( 2 , Element ), % Link Length	
+
+	Time = (element( 1 , string:to_float(Length)) / 4) + 1,
+
 	NewState = setAttribute( State , number_cars , NumberCars + 1),
 
 	class_Actor:send_actor_message( CarPID,
-	 	{ go, { Element , 10 } }, NewState ).
+	 	{ go, { Id , round( Time ) } }, NewState ).
 
 
 % Simply schedules this just created actor at the next tick (diasca 0).
@@ -106,16 +108,6 @@ onFirstDiasca( State, _SendingActorPid ) ->
 
 	% Checking:
 	true = ( SimulationInitialTick =/= undefined ),
-
-	case ?getAttr(probe_pid) of
-
-		non_wanted_probe ->
-			ok;
-
-		ProbePid ->
-			ProbePid ! { setTickOffset, SimulationInitialTick }
-
-	end,
 
 	ScheduledState = executeOneway( State, scheduleNextSpontaneousTick ),
 
