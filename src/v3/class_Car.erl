@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , Filename , LogPID ).
+-define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , LogPID ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/9, new_link/9,
-		 synchronous_new/9, synchronous_new_link/9,
-		 synchronous_timed_new/9, synchronous_timed_new_link/9,
-		 remote_new/10, remote_new_link/10, remote_synchronous_new/10,
-		 remote_synchronous_new_link/10, remote_synchronisable_new_link/10,
-		 remote_synchronous_timed_new/10, remote_synchronous_timed_new_link/10,
-		 construct/10, destruct/1 ).
+-define( wooper_construct_export, new/8, new_link/8,
+		 synchronous_new/8, synchronous_new_link/8,
+		 synchronous_timed_new/8, synchronous_timed_new_link/8,
+		 remote_new/9, remote_new_link/9, remote_synchronous_new/9,
+		 remote_synchronous_new_link/9, remote_synchronisable_new_link/9,
+		 remote_synchronous_timed_new/9, remote_synchronous_timed_new_link/9,
+		 construct/9, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, go/3 ).
@@ -38,7 +38,7 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , file() , sensor_type() ) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 
@@ -53,16 +53,11 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ origin , Origin },
 		{ path , Path },
 		{ log_pid, LogPID },
-		{ filename , Filename },
 		{ index , 1 },
 		{ speed , 0 },
-		{ next_move_tick, 1 },
 		{ car_position, -1 },
-		{ probe_pid, non_wanted_probe },	
-		{ start_time , StartTime },					
-		{ trace_categorization,
-		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
-							] ).
+		{ start_time , StartTime }					
+						] ).
 
 % Overridden destructor.
 %
@@ -91,6 +86,10 @@ request_position( State ) ->
 	Path = ?getAttr(path),
 
 	case Path of 
+
+		finish ->
+
+			executeOneway( State , declareTermination );			
 	
 		false ->
 
@@ -115,10 +114,43 @@ request_position( State ) ->
 					class_Actor:send_actor_message( VertexPID ,
 						{ getPosition, { Vertices } }, setAttribute( State , index, Index + 1) );
 
-				false ->
+				false ->							
 
-					State
+					LastPosition = getAttribute( State , car_position ),
+
+					case LastPosition == -1 of
+
+						true ->
+							
+							State;
+
+						false ->
+
+							CarId = getAttribute( State , car_name ),	
+
+							CurrentTickOffset = class_Actor:get_current_tick_offset( State ),   	
+
+							LeavesTraffic = io_lib:format( "<event time=\"~w\" type=\"vehicle leaves traffic\" person=\"~s\" link=\"~s\" vehicle=\"~s\" relativePosition=\"1.0\" />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) , CarId ] ),
+							LeavesVehicles = io_lib:format( "<event time=\"~w\" type=\"PersonLeavesVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
+							Arrival = io_lib:format( "<event time=\"~w\" type=\"arrival\" person=\"~s\" vehicle=\"~s\" link=\"~s\" legMode=\"car\"/>\n", [ CurrentTickOffset , CarId , CarId ,  atom_to_list(LastPosition) ] ),
+							ActStart = io_lib:format( "<event time=\"~w\" type=\"actstart\" person=\"~s\"  link=\"~s\"  actType=\"h\"  />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) ] ),
+
+							TextFile = lists:concat( [ LeavesTraffic , LeavesVehicles , Arrival , ActStart ] ),
 	
+							X = ?getAttr(log_pid),
+
+							NewState = setAttribute( State, path, finish ),
+
+							NewNewState = class_Actor:send_actor_message( X,
+								{ receive_action, { TextFile } }, NewState ),
+
+							executeOneway( NewNewState , addSpontaneousTick, CurrentTickOffset + 1 )
+
+
+
+					end
+
+
 			end
 
 	end.
@@ -146,14 +178,12 @@ move( State, PositionTime ) ->
 
 
 	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
-	
-
 
 	LastPosition = getAttribute( State , car_position ),
 	NewState = setAttribute( State, car_position, NewPosition ),
 		
 
-	NewStateSpeed = case Speed > 50 of
+	TickState = case Speed > 50 of
 
 		true ->
 			setAttribute(NewState, speed, 50);
@@ -161,21 +191,8 @@ move( State, PositionTime ) ->
 			setAttribute(NewState, speed, Speed)
 	end,
 
-	CurrentTick = class_Actor:get_current_tick( NewState ),
 
-	NextMove = 60 - getAttribute(State, speed),
-
-	TickDuration = class_Actor:convert_seconds_to_non_null_ticks(
-					 NextMove, _MaxRelativeErrorForTest=0.50, NewStateSpeed ),
-
-	_TickState = setAttribute( NewStateSpeed, next_move_tick,
-								 CurrentTick + TickDuration ),	
-
-	
   	CarId = getAttribute( State , car_name ),
-    	Filename = getAttribute( State , filename ),	
-
-	io:format("vInicio: ~w~n", [ Filename  ]),
 
 	FinalState = case LastPosition == -1 of
 
@@ -188,7 +205,10 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ LastPositionText , NextPositionText  ] ),
 
-			file_utils:write( Filename , TextFile  );
+			X = ?getAttr(log_pid),
+
+			class_Actor:send_actor_message( X,
+				{ receive_action, { TextFile } }, TickState );
 
 		true -> 
 
@@ -203,7 +223,11 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ Text1 , Text2 , Text3 , Text4 , NextPositionText  ] ),
 
-			file_utils:write( Filename , TextFile )
+			X = ?getAttr(log_pid),
+			
+			class_Actor:send_actor_message( X,
+				{ receive_action, { TextFile } }, TickState )
+
 	end,
 
 	executeOneway( FinalState , addSpontaneousTick, CurrentTickOffset + Time ).
@@ -220,16 +244,6 @@ onFirstDiasca( State, _SendingActorPid ) ->
 
 	% Checking:
 	true = ( SimulationInitialTick =/= undefined ),
-
-	case ?getAttr(probe_pid) of
-
-		non_wanted_probe ->
-			ok;
-
-		ProbePid ->
-			ProbePid ! { setTickOffset, SimulationInitialTick }
-
-	end,
 
 	Time = getAttribute( State, start_time ),
 
