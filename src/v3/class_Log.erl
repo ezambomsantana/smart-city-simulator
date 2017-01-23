@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, LogName , Filename ).
+-define( wooper_construct_parameters, ActorSettings, LogName ).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/3, new_link/3,
-		 synchronous_new/3, synchronous_new_link/3,
-		 synchronous_timed_new/3, synchronous_timed_new_link/3,
-		 remote_new/4, remote_new_link/4, remote_synchronous_new/4,
-		 remote_synchronous_new_link/4, remote_synchronisable_new_link/4,
-		 remote_synchronous_timed_new/4, remote_synchronous_timed_new_link/4,
-		 construct/4, destruct/1 ).
+-define( wooper_construct_export, new/2, new_link/2,
+		 synchronous_new/2, synchronous_new_link/2,
+		 synchronous_timed_new/2, synchronous_timed_new_link/2,
+		 remote_new/3, remote_new_link/3, remote_synchronous_new/3,
+		 remote_synchronous_new_link/3, remote_synchronisable_new_link/3,
+		 remote_synchronous_timed_new/3, remote_synchronous_timed_new_link/3,
+		 construct/3, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, receive_action/3).
@@ -40,23 +40,17 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name() , sensor_type() ) -> wooper:state().
+				class_Actor:name() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, LogName ),
 
-	Filename1 = io_lib:format( "/home/santaned/scsimulator/~s.xml", [ LogName ] ),
+	Filename = io_lib:format( "/home/santaned/scsimulator/saida/~s.xml", [ LogName ] ),
 							
-	InitFile = file_utils:open( Filename1, _Opts=[ append, delayed_write ] ),
+	InitFile = file_utils:open( Filename , _Opts=[ append, delayed_write ] ),
 
 	setAttributes( ActorState, [
-		{ car_name, LogName },
-		{ file , InitFile },		
-		{ file2 , Filename },
-		{ probe_pid, non_wanted_probe },
-		{ trace_categorization,
-		 text_utils:string_to_binary( ?TraceEmitterCategorization ) }
-							] ).
+		{ file , InitFile } ] ).
 
 % Overridden destructor.
 %
@@ -101,16 +95,6 @@ onFirstDiasca( State, _SendingActorPid ) ->
 
 	% Checking:
 	true = ( SimulationInitialTick =/= undefined ),
-
-	case ?getAttr(probe_pid) of
-
-		non_wanted_probe ->
-			ok;
-
-		ProbePid ->
-			ProbePid ! { setTickOffset, SimulationInitialTick }
-
-	end,
 
 	ScheduledState = executeOneway( State, scheduleNextSpontaneousTick ),
 
