@@ -8,38 +8,38 @@
 -include("test_constructs.hrl").
 
 
-create_log( _Number = 0, _Filename , _List ) ->
+create_log( _Number = 0, _List ) ->
 	_List ;
 
-create_log( Number , Filename , List  ) ->
+create_log( Number , List  ) ->
 
 	LogName = io_lib:format( "Log~B", [ Number ] ),
 
 	LogPID = class_Actor:create_initial_actor( class_Log,
-		 [ LogName , Filename ] ),
+		 [ LogName ] ),
 
-	create_log( Number - 1 , LogPID , List ++ [ LogPID ] ).
+	create_log( Number - 1 , List ++ [ LogPID ] ).
 
 
-iterate_list( _ListCount, _ListVertex , [] , _Graph , _Filename , _LogPID ) ->
+iterate_list( _ListCount, _ListVertex , [] , _Graph , _LogPID ) ->
 	ok;
 
-iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , Filename , LogPID ) ->
+iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID ) ->
 
 	Count = element ( 3 , Car ),
 
-	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , Filename , LogPID ),
+	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , LogPID ),
 
-	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , Filename , LogPID ).
+	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , LogPID ).
 
 
 
-create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _Filename , _LogPID ) ->
+create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _LogPID ) ->
 	
 	ok;
 
 
-create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename , LogPID ) ->
+create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID ) ->
 
 	CarName = io_lib:format( "~B~B",
 		[ ListCount , CarCount ] ),
@@ -62,9 +62,9 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPIDChoose ] ),
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose ] ),
 
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , Filename , LogPID );
+			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , LogPID );
 
 		_ ->
 
@@ -75,9 +75,9 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , Filename 
 			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , Filename, LogPIDChoose ] ),
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose ] ),
 
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , Filename , LogPID )
+			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , LogPID )
 
 	end.
 
@@ -179,7 +179,7 @@ run() ->
 		% well:
 		enable_data_exchanger = { true, [ "soda_parameters.cfg" ] },
 
-		enable_performance_tracker = true
+		enable_performance_tracker = false
 
 	},
 
@@ -193,26 +193,20 @@ run() ->
 	DeploymentManagerPid = sim_diasca:init( SimulationSettings,
 							   DeploymentSettings, LoadBalancingSettings ),
 
-	Config = config_parser:show("/home/santaned/scsimulator/config.xml"),
+	Config = config_parser:show("/home/santaned/entrada/config.xml"),
 
 	ListCars = matrix_parser:show( element( 4 , Config ) ),
 
 	G = matsim_to_digraph:show( element( 3 , Config ) , false ),
 
- 	Filename = element( 1 , Config ),
-
-    	InitFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
-
-    	file_utils:write( InitFile, "<events version=\"1.0\">\n" ),
-    	file_utils:close( InitFile ),
 
 	% create the vertices actors
 	ListVertex  = create_street_list( G ),
 
-	LogList = create_log( 100 , Filename , [] ),
+	LogList = create_log( 10 , [] ),
 
 	% create the cars
-	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , Filename , LogList ),
+	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , LogList ),
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
@@ -233,11 +227,7 @@ run() ->
 
 		simulation_stopped ->
 
-        		CloseFile = file_utils:open( Filename, _Opts=[ append, delayed_write ] ),
-
-        		file_utils:write( CloseFile, "</events>" ),
-       			file_utils:close( CloseFile ),
-			?test_info( "Simulation stopped spontaneously, "
+        		?test_info( "Simulation stopped spontaneously, "
 						"specified stop tick must have been reached." )
 
 	end,
@@ -248,3 +238,4 @@ run() ->
 	sim_diasca:shutdown(),
 
 	?test_stop.
+
