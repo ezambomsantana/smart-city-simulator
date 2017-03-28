@@ -45,7 +45,7 @@ construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, LogName ),
 
-	Filename = io_lib:format( "/home/santaned/scsimulator/saida/~s.xml", [ LogName ] ),
+	Filename = io_lib:format( "/home/santaned/saida/~s.xml", [ LogName ] ),
 							
 	InitFile = file_utils:open( Filename , _Opts=[ append, delayed_write ] ),
 
