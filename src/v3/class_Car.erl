@@ -53,8 +53,6 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ origin , Origin },
 		{ path , Path },
 		{ log_pid, LogPID },
-		{ index , 1 },
-		{ speed , 0 },
 		{ car_position, -1 },
 		{ start_time , StartTime }					
 						] ).
@@ -78,10 +76,13 @@ actSpontaneous( State ) ->
 	
 	?wooper_return_state_only( NewState ).
 
+remove_first( [ _First | List ] ) ->
+	
+	List.
+	
+
 -spec request_position( wooper:state() ) -> wooper:state().
 request_position( State ) ->
-
-	Index = getAttribute(State, index),
 
 	Path = ?getAttr(path),
 
@@ -97,22 +98,30 @@ request_position( State ) ->
 
 		_ ->
 
-			case Index + 1 < length( Path ) of
+			case length( Path ) > 1 of
 
 				true ->				
 	
-					InitialVertice = list_utils:get_element_at( Path, Index ),
+					InitialVertice = list_utils:get_element_at( Path, 1 ),
 
-					FinalVertice = list_utils:get_element_at( Path, Index + 1 ),
+					FinalVertice = list_utils:get_element_at( Path, 2 ),
 
 					DictVertices = getAttribute( State , dict ),
 
 					Vertices = list_to_atom(lists:concat( [ InitialVertice , FinalVertice ] )),
 
 					VertexPID = element( 2 , dict:find( InitialVertice , DictVertices)),	
+
+					DictCleaned = dict:erase( InitialVertice , DictVertices ),
+
+					CleanState = setAttribute( State , dict , DictCleaned ),
+
+					PathRest = remove_first( Path ),
+
+					FinalState = setAttribute( CleanState , path, PathRest ),
 	
 					class_Actor:send_actor_message( VertexPID ,
-						{ getPosition, { Vertices } }, setAttribute( State , index, Index + 1) );
+						{ getPosition, { Vertices } }, FinalState );
 
 				false ->							
 
@@ -122,7 +131,7 @@ request_position( State ) ->
 
 						true ->
 							
-							State;
+							executeOneway( State , declareTermination );	
 
 						false ->
 
@@ -130,26 +139,19 @@ request_position( State ) ->
 
 							CurrentTickOffset = class_Actor:get_current_tick_offset( State ),   	
 
-							LeavesTraffic = io_lib:format( "<event time=\"~w\" type=\"vehicle leaves traffic\" person=\"~s\" link=\"~s\" vehicle=\"~s\" relativePosition=\"1.0\" />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) , CarId ] ),
-							LeavesVehicles = io_lib:format( "<event time=\"~w\" type=\"PersonLeavesVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
-							Arrival = io_lib:format( "<event time=\"~w\" type=\"arrival\" person=\"~s\" vehicle=\"~s\" link=\"~s\" legMode=\"car\"/>\n", [ CurrentTickOffset , CarId , CarId ,  atom_to_list(LastPosition) ] ),
-							ActStart = io_lib:format( "<event time=\"~w\" type=\"actstart\" person=\"~s\"  link=\"~s\"  actType=\"h\"  />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) ] ),
-
-							TextFile = lists:concat( [ LeavesTraffic , LeavesVehicles , Arrival , ActStart ] ),
+							TextFile = io_lib:format( "~w,4,~s,~s\n",  
+								[ CurrentTickOffset , CarId , atom_to_list(LastPosition) ] ), % events 1 - depart, 2 - enters, 3 - left, 4 - arrive
 	
-							X = ?getAttr(log_pid),
+							LogPid = ?getAttr(log_pid),
 
 							NewState = setAttribute( State, path, finish ),
 
-							NewNewState = class_Actor:send_actor_message( X,
+							NewNewState = class_Actor:send_actor_message( LogPid ,
 								{ receive_action, { TextFile } }, NewState ),
 
 							executeOneway( NewNewState , addSpontaneousTick, CurrentTickOffset + 1 )
 
-
-
 					end
-
 
 			end
 
@@ -172,61 +174,40 @@ move( State, PositionTime ) ->
 	NewPosition = element( 1 , PositionTime ),
 	Time = element( 2 , PositionTime),
 
-	Speed = getAttribute(State, speed) + 10,
-	%	+ class_RandomManager:get_positive_integer_gaussian_value(
-	%		_Mu=5, _Sigma=4.0 ),
-
-
 	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
 
-	LastPosition = getAttribute( State , car_position ),
+	LastPosition = getAttribute( State , car_position ),	
 	NewState = setAttribute( State, car_position, NewPosition ),
 		
-
-	TickState = case Speed > 50 of
-
-		true ->
-			setAttribute(NewState, speed, 50);
-		false -> 
-			setAttribute(NewState, speed, Speed)
-	end,
-
-
   	CarId = getAttribute( State , car_name ),
 
 	FinalState = case LastPosition == -1 of
 
 		false ->
 
-
-
-			LastPositionText = io_lib:format( "<event time=\"~w\" type=\"left link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) , CarId ] ),
-			NextPositionText = io_lib:format( "<event time=\"~w\" type=\"entered link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [  CurrentTickOffset , CarId , atom_to_list(NewPosition) , CarId ] ),
+			LastPositionText = io_lib:format( "~w,3,~s,~s\n", [ CurrentTickOffset , atom_to_list(LastPosition) , CarId ] ),
+			NextPositionText = io_lib:format( "~w,2,~s,~s\n", [  CurrentTickOffset , atom_to_list(NewPosition) , CarId ] ),
 
 			TextFile = lists:concat( [ LastPositionText , NextPositionText  ] ),
 
 			X = ?getAttr(log_pid),
 
 			class_Actor:send_actor_message( X,
-				{ receive_action, { TextFile } }, TickState );
+				{ receive_action, { TextFile } }, NewState );
 
 		true -> 
 
 			LinkOrigin = getAttribute(State, link_origin),
 	   
-   			Text1 = io_lib:format( "<event time=\"~w\" type=\"actend\" person=\"~s\" link=\"~s\" actType=\"h\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin ] ),
-   			Text2 = io_lib:format( "<event time=\"~w\" type=\"departure\" person=\"~s\" link=\"~s\" legMode=\"car\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin ] ),
-  			Text3 = io_lib:format( "<event time=\"~w\" type=\"PersonEntersVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
-  			Text4 = io_lib:format( "<event time=\"~w\" type=\"wait2link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , LinkOrigin , CarId ] ),
-  	
-			NextPositionText = io_lib:format( "<event time=\"~w\" type=\"entered link\" person=\"~s\" link=\"~s\" vehicle=\"~s\"/>\n", [  CurrentTickOffset , CarId , atom_to_list(NewPosition) , CarId ] ),
+   			Text2 = io_lib:format( "~w,1,~s,car", [ CurrentTickOffset , LinkOrigin ] ),  	
+			NextPositionText = io_lib:format( "~w,2,~s,~s\n", [  CurrentTickOffset , atom_to_list(NewPosition) , CarId ] ),
 
-			TextFile = lists:concat( [ Text1 , Text2 , Text3 , Text4 , NextPositionText  ] ),
+			TextFile = lists:concat( [ Text2 , NextPositionText  ] ),
 
 			X = ?getAttr(log_pid),
 			
 			class_Actor:send_actor_message( X,
-				{ receive_action, { TextFile } }, TickState )
+				{ receive_action, { TextFile } }, NewState )
 
 	end,
 
