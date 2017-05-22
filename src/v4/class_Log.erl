@@ -64,7 +64,7 @@ destruct( State ) ->
 
 	InitFile = ?getAttr(file),
 
-	file_utils:write( InitFile, "<\events>" ),
+	file_utils:write( InitFile, "</events>" ),
 
 	file_utils:close( InitFile ),
 
