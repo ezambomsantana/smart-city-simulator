@@ -20,82 +20,6 @@ create_log( Number , List  ) ->
 
 	create_log( Number - 1 , List ++ [ LogPID ] ).
 
-
-iterate_list( _ListCount, _ListVertex , [] , _Graph , _LogPID ) ->
-	ok;
-
-iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID ) ->
-
-	Count = element ( 3 , Car ),
-
-	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , LogPID ),
-
-	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , LogPID ).
-
-
-
-create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _LogPID ) ->
-	
-	ok;
-
-
-create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID ) ->
-
-	CarName = io_lib:format( "~B~B",
-		[ ListCount , CarCount ] ),
-
-	Origin = element ( 1 , Car ),
-	Destination = element ( 2 , Car ),
-	StartTime = element ( 4 , Car ),
-	LinkOrigin = element ( 5 , Car ),
-	Type = element ( 6 , Car ),
-
-	case Path of
-
-		false ->
-
-			NewPath = digraph:get_short_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
-
-			ListVertexPath = get_path_nodes( NewPath , ListVertex , [] ),
-
-			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
-
-			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
-
-			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type ] ),
-
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , LogPID );
-
-		_ ->
-
-			ListVertexPath = get_path_nodes( Path , ListVertex , [] ),
-
-			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
-
-			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
-
-			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type ] ),
-
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , LogPID )
-
-	end.
-
-
-get_path_nodes( [] , _ListVertex , List ) ->
-	
-	List;
-
-get_path_nodes( [ Node | MoreNodes] , ListVertex , List ) ->
-
-	Element = dict:find( Node , ListVertex ),
-
-	ElementList = [{ Node , element( 2 , Element) }],
-
-	get_path_nodes( MoreNodes , ListVertex , List ++ ElementList ).	
-
-
 % for each vertex is necessary to save its out links
 create_map_list([] , _Graph , List) ->
 	List;
@@ -141,6 +65,18 @@ create_street_list([Element | MoreElements] , List , Graph) ->
 	NewElement = [{ Element , StreetPID }], 
 
 	create_street_list( MoreElements , List ++ NewElement , Graph ).
+
+collectResults([]) -> ok;
+collectResults(Trains) ->
+  receive
+    { Name } ->
+      io:format("stops at ~p ~n", [Name]),
+      collectResults(Trains -- [Name]);
+    Msg ->
+      io:format("Supervisor received unexpected message ~p~n", [Msg]),
+      collectResults(Trains)
+  end.
+
 
 % Runs the test.
 %
@@ -200,18 +136,41 @@ run() ->
 
 	Config = config_parser:show("/home/eduardo/entrada/hospital/config.xml"),
 
-	ListCars = matrix_parser:show( element( 4 , Config ) ),
+	ListCars = matrix_parser:show( element( 4 , Config ) ), % Read the cars from the trips.xml file
 
-	G = matsim_to_digraph:show( element( 3 , Config ) , false ),
-
+	G = matsim_to_digraph:show( element( 3 , Config ) , false ), % Read the map from the map.xml file
+ 
 
 	% create the vertices actors
 	ListVertex  = create_street_list( G ),
 
-	LogList = create_log( 1 , [] ),
+	LogList = create_log( 1 , [] ), % create the actor that saves the log file
+
+
+	Names = [ "car1" , "car2" , "car3" , "car4" , "car5" , "car6" ],
+
+	{List1, ListCars1 } = lists:split(round (length (ListCars) / 6 + 1), ListCars),
+
+	{List2, ListCars2 } = lists:split(round (length (ListCars) / 6 + 1), ListCars1),
+
+	{List3, ListCars3 } = lists:split(round (length (ListCars) / 6 + 1), ListCars2),
+
+	{List4, ListCars4 } = lists:split(round (length (ListCars) / 6 + 1), ListCars3),
+
+	{List5, List6 } = lists:split(round (length (ListCars) / 6 + 1), ListCars4),
+
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List1 , G , LogList , "car1" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List2 , G , LogList , "car2" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List3 , G , LogList , "car3" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List4 , G , LogList , "car4" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List5 , G , LogList , "car5" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List6 , G , LogList , "car6" , self() ]),
+  		
+	ok = collectResults(Names),
+
 
 	% create the cars
-	iterate_list( 1 , dict:from_list( ListVertex ) , ListCars , G , LogList ),
+	% create the actors that represent the cars - Need to paralelize this function
 
 	% We want this test to end once a specified virtual duration elapsed, in
 	% seconds:
