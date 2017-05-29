@@ -42,6 +42,7 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , 
 	StartTime = element ( 4 , Car ),
 	LinkOrigin = element ( 5 , Car ),
 	Type = element ( 6 , Car ),
+	Mode = element ( 7 , Car ),
 
 	case Path of
 
@@ -56,7 +57,7 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , 
 			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type ] ),
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type , Mode ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , LogPID , Name  );
 
@@ -69,7 +70,7 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , 
 			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
 
 			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type ] ),
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type , Mode ] ),
 
 			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , LogPID , Name  )
 
