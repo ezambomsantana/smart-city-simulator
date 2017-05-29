@@ -5,17 +5,17 @@
 -define( wooper_superclasses, [ class_Actor ] ).
 
 % parameters taken by the constructor ('construct').
--define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , LogPID , Type ).
+-define( wooper_construct_parameters, ActorSettings, CarName, ListVertex , Origin, Path , StartTime , LinkOrigin , LogPID , Type  , Mode).
 
 % Declaring all variations of WOOPER-defined standard life-cycle operations:
 % (template pasted, just two replacements performed to update arities)
--define( wooper_construct_export, new/9, new_link/9,
-		 synchronous_new/9, synchronous_new_link/9,
-		 synchronous_timed_new/9, synchronous_timed_new_link/9,
-		 remote_new/10, remote_new_link/10, remote_synchronous_new/10,
-		 remote_synchronous_new_link/10, remote_synchronisable_new_link/10,
-		 remote_synchronous_timed_new/10, remote_synchronous_timed_new_link/10,
-		 construct/10, destruct/1 ).
+-define( wooper_construct_export, new/10, new_link/10,
+		 synchronous_new/10, synchronous_new_link/10,
+		 synchronous_timed_new/10, synchronous_timed_new_link/10,
+		 remote_new/11, remote_new_link/11, remote_synchronous_new/11,
+		 remote_synchronous_new_link/11, remote_synchronisable_new_link/11,
+		 remote_synchronous_timed_new/11, remote_synchronous_timed_new_link/11,
+		 construct/11, destruct/1 ).
 
 % Method declarations.
 -define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, go/3 ).
@@ -38,7 +38,7 @@
 % Creates a new car
 %
 -spec construct( wooper:state(), class_Actor:actor_settings(),
-				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() ) -> wooper:state().
+				class_Actor:name(), pid() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type() , sensor_type()  , sensor_type() ) -> wooper:state().
 construct( State, ?wooper_construct_parameters ) ->
 
 
@@ -56,7 +56,8 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ type, Type },
 		{ distance , 0 },
 		{ car_position, -1 },
-		{ start_time , StartTime }					
+		{ start_time , StartTime },
+		{ mode , Mode }						
 						] ).
 
 % Overridden destructor.
@@ -110,6 +111,8 @@ request_position( State ) ->
 
 					DictVertices = getAttribute( State , dict ),
 
+					Mode = getAttribute( State , mode ),
+
 					Vertices = list_to_atom(lists:concat( [ InitialVertice , FinalVertice ] )),
 
 					VertexPID = element( 2 , dict:find( InitialVertice , DictVertices)),	
@@ -119,7 +122,7 @@ request_position( State ) ->
 					FinalState = setAttribute( State , path, PathRest ),
 	
 					class_Actor:send_actor_message( VertexPID ,
-						{ getPosition, { Vertices } }, FinalState );
+						{ getPosition, { Vertices , Mode } }, FinalState );
 
 				false ->							
 
@@ -209,9 +212,9 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ LastPositionText , NextPositionText  ] ),
 
-			X = ?getAttr(log_pid),
+			LogPID = ?getAttr(log_pid),
 
-			class_Actor:send_actor_message( X,
+			class_Actor:send_actor_message( LogPID,
 				{ receive_action, { TextFile } }, NewState );
 
 		true -> 
@@ -227,9 +230,9 @@ move( State, PositionTime ) ->
 
 			TextFile = lists:concat( [ Text1 , Text2 , Text3 , Text4 , NextPositionText  ] ),
 
-			X = ?getAttr(log_pid),
+			LogPID = ?getAttr(log_pid),
 			
-			class_Actor:send_actor_message( X,
+			class_Actor:send_actor_message( LogPID,
 				{ receive_action, { TextFile } }, NewState )
 
 	end,
