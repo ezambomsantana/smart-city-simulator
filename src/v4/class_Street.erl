@@ -79,6 +79,22 @@ actSpontaneous( State ) ->
 getPosition( State, Path , CarPID ) ->
 
 	LinkId = element( 1 , Path ),
+	Mode = element( 2 , Path ),
+
+	case Mode  of
+
+		"walk" ->
+
+			getSpeedWalk( State , LinkId , CarPID );
+
+
+		_ ->
+
+			getSpeedCar( State , LinkId , CarPID )
+
+	end.
+
+getSpeedCar( State , LinkId , CarPID ) ->
 
 	Dict = getAttribute( State, dict ),
 
@@ -115,7 +131,22 @@ getPosition( State, Path , CarPID ) ->
 	NewState = setAttribute( State , dict , NewDict ),
 
 	class_Actor:send_actor_message( CarPID,
-	 	{ go, { Id , round( Time ) } }, NewState ).
+	 	{ go, { Id , round( Time ) , round ( Length ) } }, NewState ).
+
+
+getSpeedWalk( State , LinkId , CarPID ) ->
+
+
+	Dict = getAttribute( State, dict ),
+
+	Element = element ( 2 , dict:find( LinkId , Dict )),
+	Id = element( 1 , Element ), % Link Id
+	Length = element( 2 , Element ), % Link Length	
+
+	Time = ( Length / 2 ) + 1,
+
+	class_Actor:send_actor_message( CarPID,
+	 	{ go, { Id , round( Time ) , round ( Length ) } }, State ).
 
 
 % Simply schedules this just created actor at the next tick (diasca 0).
