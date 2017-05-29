@@ -1,4 +1,4 @@
-  -module(matrix_parser).
+-module(matrix_parser).
 -include_lib("xmerl/include/xmerl.hrl").
 
 % usage:
@@ -67,7 +67,8 @@ extract_node(Node) ->
 			StartTime = children( Attributes , start ),
 			LinkOrigin = children( Attributes , link_origin ),
 			Type = children( Attributes , type ),
-			[ { Origin , Destination , Count , StartTime , LinkOrigin , Type } ];
+			Mode = children( Attributes , mode ),
+			[ { Origin , Destination , Count , StartTime , LinkOrigin , Type , Mode } ];
 
 		_ ->
 			ok
