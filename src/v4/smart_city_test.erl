@@ -149,15 +149,15 @@ run() ->
 
 	Names = [ "car1" , "car2" , "car3" , "car4" , "car5" , "car6" ],
 
-	{List1, ListCars1 } = lists:split(round (length (ListCars) / 6 + 1), ListCars),
+	{List1, ListCars1 } = lists:split(round (length (ListCars) / 6), ListCars),
 
-	{List2, ListCars2 } = lists:split(round (length (ListCars) / 6 + 1), ListCars1),
+	{List2, ListCars2 } = lists:split(round (length (ListCars) / 6), ListCars1),
 
-	{List3, ListCars3 } = lists:split(round (length (ListCars) / 6 + 1), ListCars2),
+	{List3, ListCars3 } = lists:split(round (length (ListCars) / 6), ListCars2),
 
-	{List4, ListCars4 } = lists:split(round (length (ListCars) / 6 + 1), ListCars3),
+	{List4, ListCars4 } = lists:split(round (length (ListCars) / 6), ListCars3),
 
-	{List5, List6 } = lists:split(round (length (ListCars) / 6 + 1), ListCars4),
+	{List5, List6 } = lists:split(round (length (ListCars) / 6), ListCars4),
 
 	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List1 , G , LogList , "car1" , self() ]),
 	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List2 , G , LogList , "car2" , self() ]),
