@@ -66,14 +66,26 @@ create_street_list([Element | MoreElements] , List , Graph) ->
 
 	create_street_list( MoreElements , List ++ NewElement , Graph ).
 
+
+spaw_proccess([] , _ListVertex , _CityGraph , _LogList ) -> 
+
+	ok;
+
+spaw_proccess( [ List | MoreLists ] , ListVertex , CityGraph , LogList ) ->
+
+	Name = element( 1 , List ),
+	ListTrips = element( 2 , List ),
+
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , ListTrips , CityGraph , LogList , Name , self() ]),
+	spaw_proccess( MoreLists  , ListVertex , CityGraph , LogList ).
+  
+
 collectResults([]) -> ok;
 collectResults(Trains) ->
   receive
     { Name } ->
-      io:format("stops at ~p ~n", [Name]),
       collectResults(Trains -- [Name]);
-    Msg ->
-      io:format("Supervisor received unexpected message ~p~n", [Msg]),
+    _ ->
       collectResults(Trains)
   end.
 
@@ -146,7 +158,7 @@ run() ->
 	% create the vertices actors
 	ListVertex  = create_street_list( CityGraph ),
 
-	LogList = create_log( 1 , [] ), % create the actor that saves the log file
+	LogList = create_log( 1 , [] ), % creelement( 4 , Config )ate the actor that saves the log file
 
 
 	Names = [ "car1" , "car2" , "car3" , "car4" , "car5" , "car6" ],
@@ -161,12 +173,9 @@ run() ->
 
 	{List5, List6 } = lists:split(round (length (ListCars) / 6), ListCars4),
 
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List1 , CityGraph , LogList , "car1" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List2 , CityGraph , LogList , "car2" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List3 , CityGraph , LogList , "car3" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List4 , CityGraph , LogList , "car4" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List5 , CityGraph , LogList , "car5" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List6 , CityGraph , LogList , "car6" , self() ]),
+	List = [ { "car1" , List1 } , { "car2" , List2 } , { "car3" , List3 } , { "car4" , List4 } , { "car5" , List5 } , { "car6" , List6 } ],    
+
+	spaw_proccess( List , ListVertex , CityGraph , LogList  ),
   		
 	ok = collectResults(Names),
 
