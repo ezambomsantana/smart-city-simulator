@@ -138,11 +138,13 @@ run() ->
 
 	ListCars = matrix_parser:show( element( 4 , Config ) ), % Read the cars from the trips.xml file
 
-	G = matsim_to_digraph:show( element( 3 , Config ) , false ), % Read the map from the map.xml file
+	CityGraph = matsim_to_digraph:show( element( 3 , Config ) , false ), % Read the map from the map.xml file
+
+	
  
 
 	% create the vertices actors
-	ListVertex  = create_street_list( G ),
+	ListVertex  = create_street_list( CityGraph ),
 
 	LogList = create_log( 1 , [] ), % create the actor that saves the log file
 
@@ -159,12 +161,12 @@ run() ->
 
 	{List5, List6 } = lists:split(round (length (ListCars) / 6), ListCars4),
 
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List1 , G , LogList , "car1" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List2 , G , LogList , "car2" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List3 , G , LogList , "car3" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List4 , G , LogList , "car4" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List5 , G , LogList , "car5" , self() ]),
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List6 , G , LogList , "car6" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List1 , CityGraph , LogList , "car1" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List2 , CityGraph , LogList , "car2" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List3 , CityGraph , LogList , "car3" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List4 , CityGraph , LogList , "car4" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List5 , CityGraph , LogList , "car5" , self() ]),
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , List6 , CityGraph , LogList , "car6" , self() ]),
   		
 	ok = collectResults(Names),
 
