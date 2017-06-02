@@ -24,7 +24,7 @@ init(Node) ->
 		
 		scsimulator_matrix -> 
 
-			List = trips(Content , []),
+			List = trips(Content , [] , false),
 			List;
 
 		_ -> ok
@@ -33,42 +33,62 @@ init(Node) ->
             _ -> ok
     end.
 
-trips([], List) ->
+trips([], List , _Multi ) ->
     List;
 
-trips([Node | MoreNodes], List) ->
-    Element = extract_node(Node),
+trips([Node | MoreNodes] , List , Multi ) ->
+    Element = extract_node( Node , Multi ),
     case Element of
 
 	ok ->
     		
-		trips(MoreNodes , List);
+		trips( MoreNodes , List , Multi);
 
 	_ ->
 		NewList = List ++ Element,
-		trips(MoreNodes , NewList)
+		trips( MoreNodes , NewList , Multi)
 
     end.
 
 %
 % Show a node/element and then the children of that node.
-extract_node(Node) ->
+extract_node( Node , Multi ) ->
 
     case Node of
-        #xmlElement{name=Name, attributes=Attributes} ->
+        #xmlElement{ name=Name , content=Content , attributes=Attributes } ->
             
 	    case Name of
 		
 		trip -> 
 			
-			Origin = children( Attributes , origin ),
-			Destination = children( Attributes , destination ),
-			Count = children( Attributes , count ),
-			StartTime = children( Attributes , start ),
-			LinkOrigin = children( Attributes , link_origin ),
-			Type = children( Attributes , type ),
-			Mode = children( Attributes , mode ),
-			[ { Origin , Destination , Count , StartTime , LinkOrigin , Type , Mode } ];
+			case Multi of 
+
+				false ->
+			
+					Origin = children( Attributes , origin ),
+					Destination = children( Attributes , destination ),
+					Count = children( Attributes , count ),
+					StartTime = children( Attributes , start ),
+					LinkOrigin = children( Attributes , link_origin ),
+					Type = children( Attributes , type ),
+					Mode = children( Attributes , mode ),
+					[ { Origin , Destination , Count , StartTime , LinkOrigin , Type , Mode } ];
+
+				true ->
+
+					Origin = children( Attributes , origin ),
+					Destination = children( Attributes , destination ),
+					LinkOrigin = children( Attributes , link_origin ),
+					Mode = children( Attributes , mode ),
+					[ { Origin , Destination , LinkOrigin , Mode } ]
+					
+			end;
+			
+		multi_trip ->
+
+			List = trips( Content , [] , true),
+			[ List ];
+			
 
 		_ ->
 			ok
