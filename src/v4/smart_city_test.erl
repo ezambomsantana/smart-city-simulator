@@ -152,6 +152,12 @@ run() ->
 
 	CityGraph = matsim_to_digraph:show( element( 3 , Config ) , false ), % Read the map from the map.xml file
 
+	MetroFile = element( 5 , Config ),
+
+	io:format("vInicio: ~s~n", [ MetroFile ]),
+
+	_MetroActor = class_Actor:create_initial_actor( class_Metro, [ "City" , MetroFile ] ),
+
 	
  
 
