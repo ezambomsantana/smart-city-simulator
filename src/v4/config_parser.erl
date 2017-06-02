@@ -64,7 +64,8 @@ extract_node(Node) ->
 			SimulationTime = children( Attributes , simulation_time ),
 			MapFile = children( Attributes , map_file ),
 			TripFile = children( Attributes , trip_file ),
-			{ OutputFile , SimulationTime , MapFile , TripFile };
+			MetroFile = children( Attributes , metro_file ),
+			{ OutputFile , SimulationTime , MapFile , TripFile , MetroFile };
 
 		_ ->
 			ok
