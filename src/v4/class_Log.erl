@@ -1,4 +1,4 @@
-%Class that represents a simple Sensor
+%Class that receives the messages to save in the simulator output file.
 -module(class_Log).
 
 % Determines what are the mother classes of this class (if any):
@@ -45,9 +45,7 @@ construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, LogName ),
 
-	Filename = io_lib:format( "/home/eduardo/entrada/hospital/~s.xml", [ LogName ] ),
-							
-	InitFile = file_utils:open( Filename , _Opts=[ append, delayed_write ] ),
+	InitFile = file_utils:open( LogName , _Opts=[ append, delayed_write ] ),
 
 	file_utils:write( InitFile, "<events version=\"1.0\">" ),
 
