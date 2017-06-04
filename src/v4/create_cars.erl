@@ -21,18 +21,27 @@ iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID , Name 
 
 	Count = element ( 3 , Car ),
 
-	create_cars( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , LogPID , Name ),
+	case size( Car ) == 7 of
+
+		true ->
+			create_person( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , LogPID , Name );
+
+		false ->			
+			create_person_multi_trip( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , LogPID , Name )
+
+	end,
+			
 
 	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , LogPID , Name , Sup ).
 
 
 
-create_cars( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _LogPID , _Name ) ->
+create_person( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _Path , _LogPID , _Name ) ->
 	
 	ok;
 
 
-create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , Name ) ->
+create_person( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , Name ) ->
 
 	CarName = io_lib:format( "~B~B~s",
 		[ ListCount , CarCount, Name ] ),
@@ -52,29 +61,87 @@ create_cars( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID , 
 
 			ListVertexPath = get_path_nodes( NewPath , ListVertex , [] ),
 
-			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
+			class_Actor:create_initial_actor( class_Person,
+		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPID , Type , Mode ] ),
 
-			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
-
-			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , NewPath , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type , Mode ] ),
-
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , LogPID , Name  );
+			create_person( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , NewPath , LogPID , Name  );
 
 		_ ->
 
 			ListVertexPath = get_path_nodes( Path , ListVertex , [] ),
 
-			ElectedPIDIndex = class_RandomManager:get_uniform_value( length( LogPID ) ),
+			class_Actor:create_initial_actor( class_Person,
+		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPID , Type , Mode ] ),
 
-			LogPIDChoose = list_utils:get_element_at( LogPID , ElectedPIDIndex ),
-
-			class_Actor:create_initial_actor( class_Car,
-		  		[ CarName , ListVertexPath , Origin , Path , element( 1 , string:to_integer( StartTime )) , LinkOrigin , LogPIDChoose , Type , Mode ] ),
-
-			create_cars( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , LogPID , Name  )
+			create_person( ListCount , CarCount - 1 , ListVertex ,  Car , Graph , Path , LogPID , Name  )
 
 	end.
+
+create_person_multi_trip( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _LogPID , _Name ) ->
+	
+	ok;
+
+create_person_multi_trip( ListCount , CarCount , ListVertex ,  Car , Graph , LogPID , Name ) ->
+
+	CarName = io_lib:format( "~B~B~s",
+		[ ListCount , CarCount, Name ] ),
+
+	StartTime = element ( 1 , Car ),
+	Type = element ( 2 , Car ),
+
+	ListTrips = element ( 4 , Car ),
+	
+	{ ListTripsFinal , ListVertexPath } = create_single_trip( ListTrips , [] , Graph , [] , ListVertex ),
+
+	class_Actor:create_initial_actor( class_PersonMultiTrip,
+		[ CarName , ListVertexPath , ListTripsFinal , element( 1 , string:to_integer( StartTime )) , LogPID , Type ] ),
+	
+	ok.
+
+create_single_trip( [] , ListTripsFinal , _Graph , ListVertexPath , _ListVertex ) ->
+
+	{ ListTripsFinal , ListVertexPath };
+
+create_single_trip( [ Trip |  ListTrips ] , ListTripsFinal , Graph , ListVertexPath , ListVertex ) ->
+
+	Origin = element ( 1 , Trip ),
+	Destination = element ( 2 , Trip ),
+	LinkOrigin = element ( 3 , Trip ),
+	Mode = element ( 4 , Trip ),
+
+	case Mode of
+
+		"walk" ->
+
+			Path = digraph:get_short_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
+
+			NewListVertexPath = ListVertexPath ++ get_path_nodes( Path , ListVertex , [] ),
+
+			TripCreated = [ { Mode , Origin , LinkOrigin , Destination , Path , Mode } ],
+			
+			create_single_trip( ListTrips , ListTripsFinal ++  TripCreated , Graph , NewListVertexPath , ListVertex );
+	
+
+		"car" ->
+
+			Path = digraph:get_short_path( Graph , list_to_atom(Origin) , list_to_atom(Destination) ),
+
+			TripCreated = [ { Mode , Origin , LinkOrigin , Destination , Path } ],
+
+			NewListVertexPath = ListVertexPath ++ get_path_nodes( Path , ListVertex , [] ),
+			
+			create_single_trip( ListTrips ,  ListTripsFinal ++  TripCreated , Graph , NewListVertexPath , ListVertex );
+	
+
+		"metro" ->
+
+			TripCreated = [ { Mode , Origin , Destination } ],
+			
+			create_single_trip( ListTrips , ListTripsFinal ++  TripCreated , Graph , ListVertexPath , ListVertex )
+	
+
+	end.
+
 
 
 get_path_nodes( [] , _ListVertex , List ) ->
