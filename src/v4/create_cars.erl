@@ -8,16 +8,16 @@
 % osm_parser:show("map.osm").
 
 -export([
-         iterate_list/7
+         iterate_list/8
         ]).
 
 
 % Init the XML processing
 
-iterate_list( _ListCount, _ListVertex , [] , _Graph , _LogPID , Name , Sup ) ->
+iterate_list( _ListCount, _ListVertex , [] , _Graph , _LogPID , Name , _MetroActor , Sup ) ->
 	Sup ! { Name };
 
-iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID , Name , Sup ) ->
+iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID , Name , MetroActor , Sup ) ->
 
 	Count = element ( 3 , Car ),
 
@@ -27,12 +27,12 @@ iterate_list( ListCount, ListVertex , [ Car | MoreCars] , Graph , LogPID , Name 
 			create_person( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , false , LogPID , Name );
 
 		false ->			
-			create_person_multi_trip( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , LogPID , Name )
+			create_person_multi_trip( ListCount , element (1 , string:to_integer(Count)) , ListVertex , Car , Graph , LogPID , MetroActor ,  Name )
 
 	end,
 			
 
-	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , LogPID , Name , Sup ).
+	iterate_list( ListCount + 1, ListVertex , MoreCars , Graph , LogPID , Name , MetroActor , Sup ).
 
 
 
@@ -77,11 +77,11 @@ create_person( ListCount , CarCount , ListVertex ,  Car , Graph , Path , LogPID 
 
 	end.
 
-create_person_multi_trip( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _LogPID , _Name ) ->
+create_person_multi_trip( _ListCount , _CarCount = 0 , _ListVertex ,  _Car , _Graph , _LogPID , _MetroActor , _Name ) ->
 	
 	ok;
 
-create_person_multi_trip( ListCount , CarCount , ListVertex ,  Car , Graph , LogPID , Name ) ->
+create_person_multi_trip( ListCount , CarCount , ListVertex ,  Car , Graph , LogPID  , MetroActor , Name ) ->
 
 	CarName = io_lib:format( "~B~B~s",
 		[ ListCount , CarCount, Name ] ),
@@ -94,9 +94,7 @@ create_person_multi_trip( ListCount , CarCount , ListVertex ,  Car , Graph , Log
 	{ ListTripsFinal , ListVertexPath } = create_single_trip( ListTrips , [] , Graph , [] , ListVertex ),
 
 	class_Actor:create_initial_actor( class_PersonMultiTrip,
-		[ CarName , ListVertexPath , ListTripsFinal , element( 1 , string:to_integer( StartTime )) , LogPID , Type ] ),
-	
-	ok.
+		[ CarName , ListVertexPath , ListTripsFinal , element( 1 , string:to_integer( StartTime )) , LogPID , Type , MetroActor ] ).
 
 create_single_trip( [] , ListTripsFinal , _Graph , ListVertexPath , _ListVertex ) ->
 
