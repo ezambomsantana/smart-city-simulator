@@ -7,19 +7,6 @@
 % For all facilities common to all tests:
 -include("test_constructs.hrl").
 
-
-create_log( _Number = 0, _List ) ->
-	_List ;
-
-create_log( Number , List  ) ->
-
-	LogName = io_lib:format( "Log~B", [ Number ] ),
-
-	LogPID = class_Actor:create_initial_actor( class_Log,
-		 [ LogName ] ),
-
-	create_log( Number - 1 , List ++ [ LogPID ] ).
-
 % for each vertex is necessary to save its out links
 create_map_list([] , _Graph , List) ->
 	List;
@@ -71,13 +58,13 @@ spaw_proccess([] , _ListVertex , _CityGraph , _LogList ) ->
 
 	ok;
 
-spaw_proccess( [ List | MoreLists ] , ListVertex , CityGraph , LogList ) ->
+spaw_proccess( [ List | MoreLists ] , ListVertex , CityGraph , LogPID ) ->
 
 	Name = element( 1 , List ),
 	ListTrips = element( 2 , List ),
 
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , ListTrips , CityGraph , LogList , Name , self() ]),
-	spaw_proccess( MoreLists  , ListVertex , CityGraph , LogList ).
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , ListTrips , CityGraph , LogPID , Name , self() ]),
+	spaw_proccess( MoreLists  , ListVertex , CityGraph , LogPID ).
   
 
 collectResults([]) -> ok;
@@ -120,17 +107,8 @@ run() ->
 
 		computing_hosts = { use_host_file_otherwise_local,
 							"sim-diasca-host-candidates.txt" },
-
-		%node_availability_tolerance = fail_on_unavailable_node,
-
-		% We want to embed additionally this test and its specific
-		% prerequisites, defined in the Mock Simulators:
-		%
+		
 		additional_elements_to_deploy = [ { ".", code } ],
-
-		% Note that the configuration file below has not to be declared above as
-		% well:
-		enable_data_exchanger = { true, [ "soda_parameters.cfg" ] },
 
 		enable_performance_tracker = false
 
@@ -154,7 +132,6 @@ run() ->
 
 	MetroFile = element( 5 , Config ),
 
-	io:format("vInicio: ~s~n", [ MetroFile ]),
 
 	_MetroActor = class_Actor:create_initial_actor( class_Metro, [ "City" , MetroFile ] ),
 
@@ -164,7 +141,8 @@ run() ->
 	% create the vertices actors
 	ListVertex  = create_street_list( CityGraph ),
 
-	LogList = create_log( 1 , [] ), % creelement( 4 , Config )ate the actor that saves the log file
+	LogPID = class_Actor:create_initial_actor( class_Log,
+		 		[ element( 1 , Config )  ] ),
 
 
 	Names = [ "car1" , "car2" , "car3" , "car4" , "car5" , "car6" ],
@@ -181,7 +159,7 @@ run() ->
 
 	List = [ { "car1" , List1 } , { "car2" , List2 } , { "car3" , List3 } , { "car4" , List4 } , { "car5" , List5 } , { "car6" , List6 } ],    
 
-	spaw_proccess( List , ListVertex , CityGraph , LogList  ),
+	spaw_proccess( List , ListVertex , CityGraph , LogPID  ),
   		
 	ok = collectResults(Names),
 
