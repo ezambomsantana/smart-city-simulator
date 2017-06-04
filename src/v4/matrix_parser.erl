@@ -87,7 +87,10 @@ extract_node( Node , Multi ) ->
 		multi_trip ->
 
 			List = trips( Content , [] , true),
-			[ List ];
+			Count = children( Attributes , count ),
+			StartTime = children( Attributes , start ),
+			Type = children( Attributes , type ),
+			[ { StartTime , Type , Count , List } ];
 			
 
 		_ ->
