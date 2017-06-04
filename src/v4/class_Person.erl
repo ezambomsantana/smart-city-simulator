@@ -60,18 +60,11 @@ construct( State, ?wooper_construct_parameters ) ->
 		{ mode , Mode }						
 						] ).
 
-% Overridden destructor.
-%
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	% Destructor don't do nothing in this class.
 	State.
 
-% The core of the car behaviour.
-%
-% (oneway)
-%
 -spec actSpontaneous( wooper:state() ) -> oneway_return().
 actSpontaneous( State ) ->
 	
@@ -189,17 +182,17 @@ go( State, PositionTime , _GraphPID ) ->
 -spec move( wooper:state(), car_position() ) -> class_Actor:actor_oneway_return().
 move( State, PositionTime ) ->
 
+	% get the current time of the simulation
+	CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
 
 	% get the response from the city graph
 	NewPosition = element( 1 , PositionTime ),
 	Time = element( 2 , PositionTime),
 	Length = element( 3 , PositionTime),
 
+	% Calculate the total distance that the person moved until now.
 	TotalLength = getAttribute( State , distance ) + Length,
-
 	LengthState = setAttribute( State, distance , TotalLength ),
-
-	CurrentTickOffset = class_Actor:get_current_tick_offset( LengthState ), 
 
 	LastPosition = getAttribute( LengthState , car_position ),	
 	NewState = setAttribute( LengthState, car_position, NewPosition ),
