@@ -18,7 +18,7 @@
 		 construct/4, destruct/1 ).
 
 % Method declarations.
--define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, getPosition/3).
+-define( wooper_method_export, actSpontaneous/1, onFirstDiasca/2, getTravelTime/3).
 
 
 % Allows to define WOOPER base variables and methods for that class:
@@ -43,7 +43,7 @@ construct( State, ?wooper_construct_parameters ) ->
 
 	ActorState = class_Actor:construct( State, ActorSettings, CityName ),
 
-	MetroGraph = matsim_to_digraph:show( MetroFile , false ),
+	MetroGraph = metro_parser:show( MetroFile , false ),
 
 	setAttributes( ActorState, [
 		{ city_name, CityName },
@@ -74,20 +74,20 @@ actSpontaneous( State ) ->
 %
 % (actor oneway)
 %
--spec getPosition( wooper:state(), car_index(), pid() ) ->
+-spec getTravelTime( wooper:state(), car_index(), pid() ) ->
 					   class_Actor:actor_oneway_return().
-getPosition( State, Path , CarPID ) ->
+getTravelTime( State, Path , PersonPID ) ->
 
 	{ InitialVertice , FinalVertice } = { element(1 , Path) , element(2 , Path) },
 
 	Graph = getAttribute( State , graph ),
 
-	Path = digraph:get_short_path( Graph , InitialVertice , FinalVertice ),
+	PathMetro = digraph:get_short_path( Graph , list_to_atom( InitialVertice ) , list_to_atom( FinalVertice ) ),
 
-	NumberStations = length( Path ),
+	NumberStations = length( PathMetro ),
 
-	class_Actor:send_actor_message( CarPID,
-		{ go, { NumberStations * 3 * 60 } }, State ).
+	class_Actor:send_actor_message( PersonPID,
+		{ metro_go, { NumberStations * 3 * 60 } }, State ).
 
 
 % Simply schedules this just created actor at the next tick (diasca 0).
