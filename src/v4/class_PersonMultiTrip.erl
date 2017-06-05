@@ -72,92 +72,105 @@ actSpontaneous( State ) ->
 	Trips = getAttribute( State , trips ), 
 
 	TripIndex = getAttribute( State , trip_index ), 
-
-
-	io:format("TripIndex: ~w~n", [ TripIndex ]),
 	
-	CurrentTrip = list_utils:get_element_at( Trips , TripIndex ),
-
-	Mode = element( 1 , CurrentTrip ),
-
 	case TripIndex > length( Trips ) of
 
 		true ->
-
-			Type = getAttribute( State , type ),
-							
-			TotalLength = getAttribute( State , distance ),
-
-			StartTime = getAttribute( State , start_time ),
-
-			CarId = getAttribute( State , car_name ),	
-
-			CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
-
-			TotalTime =   CurrentTickOffset - StartTime, 	
-
-			LastPosition = getAttribute( State , car_position ),
-
-			LeavesTraffic = io_lib:format( "<event time=\"~w\" type=\"vehicle leaves traffic\" person=\"~s\" link=\"~s\" vehicle=\"~s\" relativePosition=\"1.0\" />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) , CarId ] ),
+		
 			
-			LeavesVehicles = io_lib:format( "<event time=\"~w\" type=\"PersonLeavesVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
+			Path = getAttribute( State , path ), 
+
+			case Path of 
+
+				finish -> 
+					
+					executeOneway( State , declareTermination );
+
+				_ ->
+
+					Type = getAttribute( State , type ),
+							
+					TotalLength = getAttribute( State , distance ),
+
+					StartTime = getAttribute( State , start_time ),
+
+					CarId = getAttribute( State , car_name ),	
+
+					CurrentTickOffset = class_Actor:get_current_tick_offset( State ), 
+
+					TotalTime =   CurrentTickOffset - StartTime, 	
+
+					LastPosition = getAttribute( State , car_position ),
+
+					LeavesTraffic = io_lib:format( "<event time=\"~w\" type=\"vehicle leaves traffic\" person=\"~s\" link=\"~s\" vehicle=\"~s\" relativePosition=\"1.0\" />\n", [ CurrentTickOffset , CarId , LastPosition , CarId ] ),
+			
+					LeavesVehicles = io_lib:format( "<event time=\"~w\" type=\"PersonLeavesVehicle\" person=\"~s\" vehicle=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ] ),
 						
-			Arrival = io_lib:format( "<event time=\"~w\" type=\"arrival\" person=\"~s\" vehicle=\"~s\" link=\"~s\" legMode=\"car\" trip_time=\"~w\" distance=\"~w\" action=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ,  atom_to_list(LastPosition), TotalTime , TotalLength , Type ] ),
+					Arrival = io_lib:format( "<event time=\"~w\" type=\"arrival\" person=\"~s\" vehicle=\"~s\" link=\"~s\" legMode=\"car\" trip_time=\"~w\" distance=\"~w\" action=\"~s\"/>\n", [ CurrentTickOffset , CarId , CarId ,  LastPosition, TotalTime , TotalLength , Type ] ),
 
-			ActStart = io_lib:format( "<event time=\"~w\" type=\"actstart\" person=\"~s\"  link=\"~s\"  actType=\"h\"  />\n", [ CurrentTickOffset , CarId , atom_to_list(LastPosition) ] ),
+					ActStart = io_lib:format( "<event time=\"~w\" type=\"actstart\" person=\"~s\"  link=\"~s\"  actType=\"h\"  />\n", [ CurrentTickOffset , CarId , LastPosition ] ),
 
-			TextFile = lists:concat( [ LeavesTraffic , LeavesVehicles , Arrival , ActStart ] ),
+					TextFile = lists:concat( [ LeavesTraffic , LeavesVehicles , Arrival , ActStart ] ),
 
-			LogPid = ?getAttr(log_pid),
+					LogPid = ?getAttr(log_pid),
 
-			FinalState = class_Actor:send_actor_message( LogPid ,
-									{ receive_action, { TextFile } }, State ),
+					NewState = setAttribute( State , path , finish ),
 
-			executeOneway( FinalState , declareTermination );
+					FinalState = class_Actor:send_actor_message( LogPid ,
+						{ receive_action, { TextFile } }, NewState ),
+
+					executeOneway( FinalState, scheduleNextSpontaneousTick )
+
+				end;
+
 
 		_ ->
 
-		    State
+			CurrentTrip = list_utils:get_element_at( Trips , TripIndex ),
 
-	end,
+			Mode = element( 1 , CurrentTrip ),
 			
 
-	case Mode of 
+			case Mode of 
 
-		"car" ->
+				"car" ->
 	
-			NewState = request_position( State , CurrentTrip ),
-			?wooper_return_state_only( NewState );	
+					NewState = request_position( State , CurrentTrip ),
+					?wooper_return_state_only( NewState );	
 
-		"walk" ->
+				"walk" ->
 	
-			NewState = request_position( State , CurrentTrip  ),
-			?wooper_return_state_only( NewState );	
+					NewState = request_position( State , CurrentTrip  ),
+					?wooper_return_state_only( NewState );	
 
-		"metro" ->
+				"metro" ->
 			
-			CarPosition = getAttribute( State , car_position ), 
+					CarPosition = getAttribute( State , car_position ), 
 
-			case CarPosition of 
+					case CarPosition of 
 	
 	
-				finish ->
+						finish ->
 					
-					NextTrip = getAttribute( State , trip_index ) + 1,
+							NextTrip = getAttribute( State , trip_index ) + 1,
 
-					NewState = setAttribute( State , trip_index , NextTrip ),
+							NewState = setAttribute( State , trip_index , NextTrip ),
 
-					executeOneway( NewState, scheduleNextSpontaneousTick );
+							executeOneway( NewState, scheduleNextSpontaneousTick );
 
-				_ ->
+						_ ->
 	
-					NewState = request_position_metro( State , CurrentTrip ),
+							NewState = request_position_metro( State , CurrentTrip ),
 
-					?wooper_return_state_only( NewState )
+							?wooper_return_state_only( NewState )
+
+					end
+
+					
+
 
 			end
 
-					
 
 	end.
 			
