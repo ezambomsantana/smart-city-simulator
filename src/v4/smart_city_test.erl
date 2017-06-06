@@ -54,17 +54,17 @@ create_street_list([Element | MoreElements] , List , Graph) ->
 	create_street_list( MoreElements , List ++ NewElement , Graph ).
 
 
-spaw_proccess([] , _ListVertex , _CityGraph , _LogList ) -> 
+spaw_proccess([] , _ListVertex , _CityGraph , _LogList , _MetroActor  ) -> 
 
 	ok;
 
-spaw_proccess( [ List | MoreLists ] , ListVertex , CityGraph , LogPID ) ->
+spaw_proccess( [ List | MoreLists ] , ListVertex , CityGraph , LogPID , MetroActor ) ->
 
 	Name = element( 1 , List ),
 	ListTrips = element( 2 , List ),
 
-	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , ListTrips , CityGraph , LogPID , Name , self() ]),
-	spaw_proccess( MoreLists  , ListVertex , CityGraph , LogPID ).
+	spawn(create_cars, iterate_list , [ 1 , dict:from_list( ListVertex ) , ListTrips , CityGraph , LogPID , Name , MetroActor , self() ]),
+	spaw_proccess( MoreLists  , ListVertex , CityGraph , LogPID , MetroActor ).
   
 
 collectResults([]) -> ok;
@@ -130,10 +130,10 @@ run() ->
 
 	CityGraph = matsim_to_digraph:show( element( 3 , Config ) , false ), % Read the map from the map.xml file
 
-	MetroFile = element( 5 , Config ),
+	MetroFile = element( 5 , Config ), % Read the metro graph from the city. TODO: verify if this configurition does not exist.
 
 
-	_MetroActor = class_Actor:create_initial_actor( class_Metro, [ "City" , MetroFile ] ),
+	MetroActor = class_Actor:create_initial_actor( class_Metro, [ "City" , MetroFile ] ),
 
 	
  
@@ -159,7 +159,7 @@ run() ->
 
 	List = [ { "car1" , List1 } , { "car2" , List2 } , { "car3" , List3 } , { "car4" , List4 } , { "car5" , List5 } , { "car6" , List6 } ],    
 
-	spaw_proccess( List , ListVertex , CityGraph , LogPID  ),
+	spaw_proccess( List , ListVertex , CityGraph , LogPID , MetroActor ),
   		
 	ok = collectResults(Names),
 
